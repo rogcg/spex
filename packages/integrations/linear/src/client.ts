@@ -12,7 +12,7 @@ import type {
 
 const DEFAULT_BASE_URL = 'https://mcp.linear.app/mcp';
 const DEFAULT_CLIENT_NAME = 'spex';
-const DEFAULT_CLIENT_VERSION = '0.5.2';
+const DEFAULT_CLIENT_VERSION = '0.6.0';
 const ENV_VAR = 'LINEAR_API_KEY';
 
 export class MissingLinearApiKeyError extends SpexError {

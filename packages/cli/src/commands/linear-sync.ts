@@ -103,12 +103,6 @@ export async function runLinearSyncCommand(options: LinearSyncCommandOptions = {
     return;
   }
 
-  if ((process.env.LINEAR_API_KEY ?? '').length === 0) {
-    console.error(STRINGS.linearSyncCommand.missingApiKey);
-    process.exitCode = 1;
-    return;
-  }
-
   if (options.dryRun === true) {
     console.log(
       STRINGS.linearSyncCommand.dryRun({
@@ -118,6 +112,12 @@ export async function runLinearSyncCommand(options: LinearSyncCommandOptions = {
         prUrl,
       }),
     );
+    return;
+  }
+
+  if ((process.env.LINEAR_API_KEY ?? '').length === 0) {
+    console.error(STRINGS.linearSyncCommand.missingApiKey);
+    process.exitCode = 1;
     return;
   }
 

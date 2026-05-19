@@ -25,9 +25,13 @@ afterEach(() => {
 });
 
 describe('runGithubSetupCommand', () => {
-  it('creates .github/workflows/ and writes both templates on a clean project', async () => {
+  it('creates .github/workflows/ and writes all templates on a clean project', async () => {
     const result = await runGithubSetupCommand();
-    expect(result.written).toEqual(['pr-review.yml', 'implement-from-issue.yml']);
+    expect(result.written).toEqual([
+      'pr-review.yml',
+      'implement-from-issue.yml',
+      'linear-sync.yml',
+    ]);
     expect(result.skipped).toEqual([]);
     const workflowsDir = join(projectDir, '.github', 'workflows');
     const dirStat = await stat(workflowsDir);
@@ -36,6 +40,8 @@ describe('runGithubSetupCommand', () => {
     expect(prContent).toContain('name: SPEX Review');
     const issueContent = await readFile(join(workflowsDir, 'implement-from-issue.yml'), 'utf8');
     expect(issueContent).toContain('name: SPEX Implement from Issue');
+    const syncContent = await readFile(join(workflowsDir, 'linear-sync.yml'), 'utf8');
+    expect(syncContent).toContain('name: SPEX Linear Sync');
   });
 
   it('skips existing files when --force is not set', async () => {
@@ -44,7 +50,7 @@ describe('runGithubSetupCommand', () => {
     await writeFile(join(workflowsDir, 'pr-review.yml'), 'custom content', 'utf8');
 
     const result = await runGithubSetupCommand();
-    expect(result.written).toEqual(['implement-from-issue.yml']);
+    expect(result.written).toEqual(['implement-from-issue.yml', 'linear-sync.yml']);
     expect(result.skipped).toEqual(['pr-review.yml']);
     const preserved = await readFile(join(workflowsDir, 'pr-review.yml'), 'utf8');
     expect(preserved).toBe('custom content');
@@ -56,7 +62,11 @@ describe('runGithubSetupCommand', () => {
     await writeFile(join(workflowsDir, 'pr-review.yml'), 'custom content', 'utf8');
 
     const result = await runGithubSetupCommand({ force: true });
-    expect(result.written).toEqual(['pr-review.yml', 'implement-from-issue.yml']);
+    expect(result.written).toEqual([
+      'pr-review.yml',
+      'implement-from-issue.yml',
+      'linear-sync.yml',
+    ]);
     expect(result.skipped).toEqual([]);
     const overwritten = await readFile(join(workflowsDir, 'pr-review.yml'), 'utf8');
     expect(overwritten).toContain('name: SPEX Review');
