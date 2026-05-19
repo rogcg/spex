@@ -234,6 +234,53 @@ export const STRINGS = {
     cancelled: 'Cancelled. No changes were applied.',
   },
 
+  posthogWebhookCommand: {
+    description:
+      'Handle a PostHog error-tracking webhook delivery: parse, apply filter, optionally auto-trigger spex fix',
+    payloadPathFlagDescription: 'path to a JSON file containing the webhook payload',
+    signatureFlagDescription:
+      'PostHog signature header value (e.g. `sha256=…`) — used to verify the payload against POSTHOG_WEBHOOK_SECRET',
+    secretFlagDescription: 'override POSTHOG_WEBHOOK_SECRET env var for signature verification',
+    dryRunFlagDescription:
+      'parse the payload + apply the filter, but do not invoke spex fix on a trigger decision',
+
+    integrationNotConfigured:
+      'Error: PostHog integration not configured. Add `integrations.posthog.auto_fix` to .ai/config.yaml.',
+    invalidConfig: (issues: readonly string[]) =>
+      `Error: invalid .ai/config.yaml:\n${issues.map((i) => `  - ${i}`).join('\n')}`,
+    missingPayloadPath: 'Error: provide --payload-path pointing to the JSON-decoded webhook body.',
+    payloadReadFailed: (path: string, reason: string) =>
+      `Error: failed to read payload at ${path}: ${reason}`,
+    invalidPayload: (reason: string) => `Error: failed to parse webhook payload: ${reason}`,
+    signatureWithoutSecret:
+      'Error: --signature was supplied but no secret is configured. Set POSTHOG_WEBHOOK_SECRET or pass --secret.',
+    signatureMismatch: 'Error: PostHog webhook signature did not match. Rejecting payload.',
+    signatureVerified: '  ✓ webhook signature verified.',
+    signatureSkippedWithSecret:
+      '  ⚠ POSTHOG_WEBHOOK_SECRET is set but no --signature header was supplied; skipping signature check.',
+    signatureSkippedNoSecret:
+      '  ⚠ No webhook secret configured — skipping signature verification. Set POSTHOG_WEBHOOK_SECRET in production.',
+    eventSummary: (event: {
+      kind: string;
+      issueId?: string;
+      severity?: string | null;
+      occurrences?: number | null;
+    }) => {
+      const id = 'issueId' in event && event.issueId ? event.issueId : '<n/a>';
+      const sev = 'severity' in event && event.severity ? event.severity : 'unknown';
+      const occ =
+        'occurrences' in event && typeof event.occurrences === 'number'
+          ? String(event.occurrences)
+          : '?';
+      return `\nEvent: ${event.kind}\n  issueId: ${id}\n  severity: ${sev}\n  occurrences: ${occ}`;
+    },
+    skipped: (reason: string) => `\nSkipping auto-fix: ${reason}`,
+    dryRunTrigger: (issueId: string) =>
+      `\n[dry-run] Would trigger: spex fix --from-error=posthog:${issueId} --auto`,
+    triggering: (issueId: string) =>
+      `\nTriggering auto-fix for posthog:${issueId} (PR will be opened with the auto-fix label).`,
+  },
+
   mcpServerCommand: {
     description: 'Start SPEX as an MCP server (consumable by Claude Code, Cursor, etc.)',
     transportFlagDescription: 'Transport to use (stdio is the only supported option)',

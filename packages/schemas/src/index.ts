@@ -77,12 +77,18 @@ export {
   IntegrationsConfigSchema,
   LinearIntegrationConfigSchema,
   LinearStatusMappingSchema,
+  PostHogAutoFixConfigSchema,
+  PostHogIntegrationConfigSchema,
+  PostHogIssueSeveritySchema,
   ReviewModeSchema,
   type AiConfig,
   type GitHubIntegrationConfig,
   type IntegrationsConfig,
   type LinearIntegrationConfig,
   type LinearStatusMapping,
+  type PostHogAutoFixConfig,
+  type PostHogIntegrationConfig,
+  type PostHogIssueSeverity,
   type ReviewMode,
 } from './ai-config.js';
 export {

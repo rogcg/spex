@@ -6,6 +6,7 @@ import { runInitCommand } from './commands/init.js';
 import { runLinearSyncCommand } from './commands/linear-sync.js';
 import { runMcpServerCommand } from './commands/mcp-server.js';
 import { runNewCommand } from './commands/new.js';
+import { runPostHogWebhookCommand } from './commands/posthog-webhook.js';
 import { runReviewCommand } from './commands/review.js';
 import { STRINGS } from './strings.js';
 import { printBanner } from './ui/banner.js';
@@ -191,6 +192,34 @@ program
           ...(opts.prUrl !== undefined ? { prUrl: opts.prUrl } : {}),
           ...(opts.branch !== undefined ? { branch: opts.branch } : {}),
           ...(opts.prBody !== undefined ? { prBody: opts.prBody } : {}),
+          ...(opts.dryRun ? { dryRun: true } : {}),
+        });
+      } catch (error) {
+        handleError(error);
+      }
+    },
+  );
+
+program
+  .command('posthog-webhook')
+  .description(STRINGS.posthogWebhookCommand.description)
+  .option('--payload-path <path>', STRINGS.posthogWebhookCommand.payloadPathFlagDescription)
+  .option('--signature <header>', STRINGS.posthogWebhookCommand.signatureFlagDescription)
+  .option('--secret <secret>', STRINGS.posthogWebhookCommand.secretFlagDescription)
+  .option('--dry-run', STRINGS.posthogWebhookCommand.dryRunFlagDescription)
+  .action(
+    async (opts: {
+      payloadPath?: string;
+      signature?: string;
+      secret?: string;
+      dryRun?: boolean;
+    }) => {
+      printBanner();
+      try {
+        await runPostHogWebhookCommand({
+          ...(opts.payloadPath !== undefined ? { payloadPath: opts.payloadPath } : {}),
+          ...(opts.signature !== undefined ? { signature: opts.signature } : {}),
+          ...(opts.secret !== undefined ? { secret: opts.secret } : {}),
           ...(opts.dryRun ? { dryRun: true } : {}),
         });
       } catch (error) {

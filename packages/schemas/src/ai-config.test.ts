@@ -126,6 +126,66 @@ describe('LinearIntegrationConfigSchema', () => {
   });
 });
 
+describe('PostHogIntegrationConfigSchema', () => {
+  it('applies defaults for auto_fix when posthog is set to an empty object', () => {
+    const parsed = AiConfigSchema.parse({
+      integrations: { posthog: { auto_fix: {} } },
+    });
+    expect(parsed.integrations?.posthog?.auto_fix.enabled).toBe(false);
+    expect(parsed.integrations?.posthog?.auto_fix.severity).toEqual(['critical']);
+    expect(parsed.integrations?.posthog?.auto_fix.min_occurrences).toBe(5);
+  });
+
+  it('honours a fully-specified auto_fix block', () => {
+    const parsed = AiConfigSchema.parse({
+      integrations: {
+        posthog: {
+          auto_fix: {
+            enabled: true,
+            severity: ['critical', 'error'],
+            min_occurrences: 25,
+          },
+        },
+      },
+    });
+    expect(parsed.integrations?.posthog?.auto_fix.enabled).toBe(true);
+    expect(parsed.integrations?.posthog?.auto_fix.severity).toEqual(['critical', 'error']);
+    expect(parsed.integrations?.posthog?.auto_fix.min_occurrences).toBe(25);
+  });
+
+  it('rejects an unknown severity value', () => {
+    expect(() =>
+      AiConfigSchema.parse({
+        integrations: { posthog: { auto_fix: { severity: ['blocker'] } } },
+      }),
+    ).toThrow();
+  });
+
+  it('rejects min_occurrences < 1', () => {
+    expect(() =>
+      AiConfigSchema.parse({
+        integrations: { posthog: { auto_fix: { min_occurrences: 0 } } },
+      }),
+    ).toThrow();
+  });
+
+  it('rejects an empty severity array', () => {
+    expect(() =>
+      AiConfigSchema.parse({
+        integrations: { posthog: { auto_fix: { severity: [] } } },
+      }),
+    ).toThrow();
+  });
+
+  it('rejects unknown keys under auto_fix (strict)', () => {
+    expect(() =>
+      AiConfigSchema.parse({
+        integrations: { posthog: { auto_fix: { mystery: true } } },
+      }),
+    ).toThrow();
+  });
+});
+
 describe('AiConfigSchema', () => {
   it('accepts an empty config (no integrations)', () => {
     const parsed = AiConfigSchema.parse({});

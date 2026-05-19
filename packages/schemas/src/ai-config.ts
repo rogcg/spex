@@ -44,10 +44,46 @@ export const LinearIntegrationConfigSchema = z
   })
   .strict();
 
+export const PostHogIssueSeveritySchema = z.enum(['critical', 'error', 'warning', 'info', 'debug']);
+
+export const PostHogAutoFixConfigSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    /**
+     * Severity allow-list. Defaults to `['critical']` — events whose severity
+     * is unclassified by PostHog also pass when this list contains
+     * `'critical'`, since unclassified is conservatively treated as critical.
+     */
+    severity: z.array(PostHogIssueSeveritySchema).min(1).default(['critical']),
+    /**
+     * Minimum occurrence count needed before SPEX triggers a fix workflow.
+     * Defaults to 5 — high enough to skip one-off transient errors, low
+     * enough to react quickly when an issue is genuinely re-firing.
+     */
+    min_occurrences: z.number().int().min(1).default(5),
+  })
+  .strict()
+  .default({
+    enabled: false,
+    severity: ['critical'],
+    min_occurrences: 5,
+  });
+
+export const PostHogIntegrationConfigSchema = z
+  .object({
+    /**
+     * Used by `spex posthog-webhook` to decide whether to auto-trigger a fix
+     * on incoming PostHog error-tracking events.
+     */
+    auto_fix: PostHogAutoFixConfigSchema,
+  })
+  .strict();
+
 export const IntegrationsConfigSchema = z
   .object({
     github: GitHubIntegrationConfigSchema.optional(),
     linear: LinearIntegrationConfigSchema.optional(),
+    posthog: PostHogIntegrationConfigSchema.optional(),
   })
   .strict();
 
@@ -60,5 +96,8 @@ export const AiConfigSchema = z
 export type GitHubIntegrationConfig = z.infer<typeof GitHubIntegrationConfigSchema>;
 export type LinearStatusMapping = z.infer<typeof LinearStatusMappingSchema>;
 export type LinearIntegrationConfig = z.infer<typeof LinearIntegrationConfigSchema>;
+export type PostHogIntegrationConfig = z.infer<typeof PostHogIntegrationConfigSchema>;
+export type PostHogAutoFixConfig = z.infer<typeof PostHogAutoFixConfigSchema>;
+export type PostHogIssueSeverity = z.infer<typeof PostHogIssueSeveritySchema>;
 export type IntegrationsConfig = z.infer<typeof IntegrationsConfigSchema>;
 export type AiConfig = z.infer<typeof AiConfigSchema>;

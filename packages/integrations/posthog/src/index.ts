@@ -19,6 +19,17 @@ export {
   type BuildPostHogBugSourceOptions,
   type PostHogBugSource,
 } from './bug-source.js';
+export {
+  POSTHOG_ISSUE_SEVERITIES,
+  type AutoFixDecision,
+  type AutoFixFilterConfig,
+  decideAutoFix,
+  InvalidPostHogWebhookPayloadError,
+  parsePostHogWebhookPayload,
+  type PostHogIssueSeverity,
+  type PostHogWebhookEvent,
+  verifyPostHogWebhookSignature,
+} from './webhook.js';
 export type {
   CreatePostHogMcpClientOptions,
   PostHogErrorIssue,
