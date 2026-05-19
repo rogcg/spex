@@ -28,6 +28,7 @@
     "@spex/core": "workspace:*",
     "@spex/integrations-github": "workspace:^",
     "@spex/integrations-linear": "workspace:^",
+    "@spex/integrations-posthog": "workspace:^",
     "@spex/mcp-server": "workspace:^",
     "@spex/schemas": "workspace:*",
     "commander": "^12.1.0"

@@ -153,11 +153,27 @@ export const STRINGS = {
     dryRunFlagDescription: 'show the analysis + proposed fix without writing or running git',
     noGitFlagDescription: 'skip branch creation and commit',
     fromErrorFlagDescription:
-      'placeholder for structured error sources (PostHog/Sentry) — not yet supported',
+      'pull bug context from a structured error source — supported: `posthog:<issue-id>` or bare `<issue-id>` (defaults to posthog)',
 
     missingDescription:
       'Error: provide a bug description.\n  Example: spex fix "pagination resets when I change a filter"',
-    fromErrorNotSupported: 'Error: --from-error is not supported yet.',
+    fromErrorUnsupportedSource: (source: string) =>
+      `Error: --from-error source "${source}" is not supported yet. Supported: posthog:<issue-id>.`,
+    fromErrorAndDescriptionConflict: 'Error: pass either a description or --from-error, not both.',
+    fromErrorMissingPosthogApiKey:
+      'Error: POSTHOG_API_KEY is not set. Generate a personal API key with the "MCP Server" preset at https://posthog.com (Settings → User → Personal API Keys) and set POSTHOG_API_KEY before running with --from-error=posthog.',
+    fromErrorFetching: (id: string) => `\nFetching PostHog error issue ${id}...`,
+    fromErrorFetched: (opts: {
+      id: string;
+      occurrences: number | null;
+      affectedUsers: number | null;
+      recordings: number;
+    }) =>
+      `  ✓ ${opts.id} (occurrences=${opts.occurrences ?? '?'}, affectedUsers=${
+        opts.affectedUsers ?? '?'
+      }, session recordings=${opts.recordings})`,
+    fromErrorFetchFailed: (id: string, reason: string) =>
+      `Error: failed to fetch PostHog issue ${id}: ${reason}`,
     notAGitRepo:
       'Error: not inside a git repository. Run `git init` or pass --no-git to skip git operations.',
     dirtyWorkingTree: (entries: readonly string[]) =>

@@ -20,11 +20,17 @@ const DEFAULT_MAX_FILE_BYTES = 256_000;
 const FIELD_SEP = '\x1f';
 const RECORD_SEP = '\x1e';
 
+// Sources whose end-to-end fetch path is wired through to the CLI. `github`
+// is still a stub — that flow lands in a later sprint.
+const SUPPORTED_BUG_CONTEXT_SOURCES: readonly ErrorReference['source'][] = ['manual', 'posthog'];
+
 export class UnsupportedErrorSourceError extends SpexError {
   readonly source: string;
 
   constructor(source: string) {
-    super(`Bug context source "${source}" is not yet supported. Only "manual" is available.`);
+    super(
+      `Bug context source "${source}" is not yet supported. Available: ${SUPPORTED_BUG_CONTEXT_SOURCES.join(', ')}.`,
+    );
     this.source = source;
   }
 }
@@ -56,7 +62,10 @@ export async function collectBugContext(options: CollectBugContextOptions): Prom
   if (options.description.trim().length === 0) {
     throw new SpexError('collectBugContext: description is required');
   }
-  if (options.errorReference && options.errorReference.source !== 'manual') {
+  if (
+    options.errorReference &&
+    !SUPPORTED_BUG_CONTEXT_SOURCES.includes(options.errorReference.source)
+  ) {
     throw new UnsupportedErrorSourceError(options.errorReference.source);
   }
 

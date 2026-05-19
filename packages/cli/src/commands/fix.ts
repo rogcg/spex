@@ -20,8 +20,14 @@ import {
   revertFixDiff,
   runFixFlow,
 } from '@spex/core';
+import {
+  type PostHogBugSource,
+  buildPostHogBugSource,
+  createPostHogMcpClient,
+} from '@spex/integrations-posthog';
 import type {
   BugErrorInfo,
+  ErrorReference,
   FixOption,
   FixProposal,
   Hypothesis,
@@ -42,19 +48,128 @@ export interface FixCommandOptions {
   fromError?: string;
 }
 
+export interface ParsedFromError {
+  source: ErrorReference['source'];
+  id: string;
+}
+
+/**
+ * Parse the `--from-error` value. Accepts `posthog:<id>` or a bare `<id>`
+ * (defaults to `posthog`). Returns the source + id; throws when the prefix
+ * is recognised but unsupported, or when the value is empty.
+ */
+export function parseFromError(raw: string): ParsedFromError {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) {
+    throw new Error('--from-error value is empty');
+  }
+  const colon = trimmed.indexOf(':');
+  if (colon === -1) {
+    return { source: 'posthog', id: trimmed };
+  }
+  const prefix = trimmed.slice(0, colon).toLowerCase();
+  const id = trimmed.slice(colon + 1).trim();
+  if (id.length === 0) {
+    throw new Error(`--from-error value "${raw}" is missing an id after the prefix`);
+  }
+  if (prefix === 'posthog') return { source: 'posthog', id };
+  // Other sources (github, sentry, …) are recognised as identifiers but not
+  // yet wired through to a fetch path — caller surfaces the error.
+  throw new UnsupportedFromErrorSourceError(prefix);
+}
+
+export class UnsupportedFromErrorSourceError extends Error {
+  readonly source: string;
+  constructor(source: string) {
+    super(`--from-error source "${source}" is not supported yet`);
+    this.source = source;
+  }
+}
+
 export async function runFixCommand(
   description: string | undefined,
   options: FixCommandOptions = {},
 ): Promise<void> {
-  if (options.fromError) {
-    console.error(STRINGS.fixCommand.fromErrorNotSupported);
+  let fromErrorParsed: ParsedFromError | null = null;
+  if (options.fromError && options.fromError.trim().length > 0) {
+    try {
+      fromErrorParsed = parseFromError(options.fromError);
+    } catch (cause) {
+      if (cause instanceof UnsupportedFromErrorSourceError) {
+        console.error(STRINGS.fixCommand.fromErrorUnsupportedSource(cause.source));
+      } else {
+        console.error(
+          STRINGS.errors.generic(cause instanceof Error ? cause.message : String(cause)),
+        );
+      }
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const hasDescription = description !== undefined && description.trim().length > 0;
+  if (fromErrorParsed && hasDescription) {
+    console.error(STRINGS.fixCommand.fromErrorAndDescriptionConflict);
     process.exitCode = 1;
     return;
   }
-  if (!description || description.trim().length === 0) {
+  if (!fromErrorParsed && !hasDescription) {
     console.error(STRINGS.fixCommand.missingDescription);
     process.exitCode = 1;
     return;
+  }
+
+  if (fromErrorParsed && fromErrorParsed.source === 'posthog') {
+    if ((process.env.POSTHOG_API_KEY ?? '').length === 0) {
+      console.error(STRINGS.fixCommand.fromErrorMissingPosthogApiKey);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  let posthogBugSource: PostHogBugSource | null = null;
+  let effectiveDescription = description?.trim() ?? '';
+  let effectiveError: BugErrorInfo | undefined;
+  let errorReference: ErrorReference | undefined;
+  if (fromErrorParsed && fromErrorParsed.source === 'posthog') {
+    console.log(STRINGS.fixCommand.fromErrorFetching(fromErrorParsed.id));
+    try {
+      const posthog = await createPostHogMcpClient();
+      try {
+        posthogBugSource = await buildPostHogBugSource({
+          client: posthog,
+          issueId: fromErrorParsed.id,
+        });
+      } finally {
+        await posthog.close();
+      }
+    } catch (cause) {
+      const reason = cause instanceof Error ? cause.message : String(cause);
+      console.error(STRINGS.fixCommand.fromErrorFetchFailed(fromErrorParsed.id, reason));
+      process.exitCode = 1;
+      return;
+    }
+    effectiveDescription = posthogBugSource.description;
+    effectiveError = buildBugErrorInfo(posthogBugSource);
+    errorReference = { source: 'posthog', id: fromErrorParsed.id };
+    console.log(
+      STRINGS.fixCommand.fromErrorFetched({
+        id: fromErrorParsed.id,
+        occurrences: posthogBugSource.issue.occurrences,
+        affectedUsers: posthogBugSource.issue.affectedUsers,
+        recordings: posthogBugSource.sessionRecordingUrls.length,
+      }),
+    );
+  }
+
+  // Merge CLI-provided --error-message / --error-stack on top of any source-
+  // derived error info so explicit flags still win.
+  if (options.errorMessage || options.errorStack) {
+    effectiveError = {
+      ...(effectiveError ?? {}),
+      ...(options.errorMessage ? { message: options.errorMessage } : {}),
+      ...(options.errorStack ? { stack: options.errorStack } : {}),
+    };
   }
 
   const projectDir = resolve(process.cwd());
@@ -94,7 +209,7 @@ export async function runFixCommand(
     }
   }
 
-  console.log(STRINGS.fixCommand.aboutToDebug(description));
+  console.log(STRINGS.fixCommand.aboutToDebug(effectiveDescription));
   if (auto) {
     console.log(STRINGS.fixCommand.autoModeWarning);
   }
@@ -120,23 +235,16 @@ export async function runFixCommand(
     }),
   );
 
-  const error: BugErrorInfo | undefined =
-    options.errorMessage || options.errorStack
-      ? {
-          ...(options.errorMessage ? { message: options.errorMessage } : {}),
-          ...(options.errorStack ? { stack: options.errorStack } : {}),
-        }
-      : undefined;
-
   let result: RunFixFlowResult;
   try {
     result = await runFixFlow({
       llm,
       projectDir,
-      description,
+      description: effectiveDescription,
       dryRun,
       ...(options.affected ? { affectedFiles: options.affected } : {}),
-      ...(error ? { error } : {}),
+      ...(effectiveError ? { error: effectiveError } : {}),
+      ...(errorReference ? { errorReference } : {}),
       selectHypothesis: makeSelectHypothesis(auto),
       approveRootCause: makeApproveRootCause(auto),
       selectFixOption: makeSelectFixOption(auto),
@@ -225,6 +333,19 @@ export async function runFixCommand(
         selectedFixScope: result.selectedOption.scope,
         selectedFixRisk: result.selectedOption.risk,
         regressionTestPath: result.regressionTest.path,
+        ...(posthogBugSource
+          ? {
+              posthogIssue: {
+                id: posthogBugSource.issue.id,
+                url: posthogBugSource.issue.url,
+                name: posthogBugSource.issue.name,
+                occurrences: posthogBugSource.issue.occurrences,
+                affectedUsers: posthogBugSource.issue.affectedUsers,
+                firstSeen: posthogBugSource.issue.firstSeen,
+                sessionRecordingUrls: posthogBugSource.sessionRecordingUrls,
+              },
+            }
+          : {}),
       },
     });
   }
@@ -234,6 +355,18 @@ export async function runFixCommand(
 
 function firstLine(message: string): string {
   return message.split('\n', 1)[0] ?? message;
+}
+
+function buildBugErrorInfo(source: PostHogBugSource): BugErrorInfo | undefined {
+  const fields: BugErrorInfo = {
+    firstOccurrence: source.firstOccurrence,
+    ...(source.errorMessage ? { message: source.errorMessage } : {}),
+    ...(source.errorStack ? { stack: source.errorStack } : {}),
+  };
+  // BugErrorInfoSchema requires at least one populated field; firstOccurrence
+  // alone is enough, so this is always defined here. Keep the optional return
+  // type to mirror the caller's contract.
+  return fields;
 }
 
 function makeSelectHypothesis(auto: boolean): (list: HypothesisList) => Promise<Hypothesis> {

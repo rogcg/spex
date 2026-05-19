@@ -126,6 +126,55 @@ describe('buildFixPrTemplate', () => {
     const result = buildFixPrTemplate({ ...baseFix, regressionTestPath: null });
     expect(result.body).not.toContain('## Regression test');
   });
+
+  it('omits the PostHog section by default', () => {
+    const result = buildFixPrTemplate(baseFix);
+    expect(result.body).not.toContain('## PostHog');
+  });
+
+  it('renders the PostHog section with issue, telemetry and session recordings when supplied', () => {
+    const result = buildFixPrTemplate({
+      ...baseFix,
+      posthogIssue: {
+        id: 'iss_abc123',
+        url: 'https://app.posthog.com/project/336884/error_tracking/iss_abc123',
+        name: 'TypeError: cannot read property "id" of undefined',
+        occurrences: 142,
+        affectedUsers: 37,
+        firstSeen: '2026-05-15T12:34:56Z',
+        sessionRecordingUrls: [
+          'https://app.posthog.com/project/336884/replay/sess_a',
+          'https://app.posthog.com/project/336884/replay/sess_b',
+        ],
+      },
+    });
+    expect(result.body).toContain('## PostHog');
+    expect(result.body).toContain(
+      '[iss_abc123](https://app.posthog.com/project/336884/error_tracking/iss_abc123)',
+    );
+    expect(result.body).toContain('occurrences=142');
+    expect(result.body).toContain('affectedUsers=37');
+    expect(result.body).toContain('firstSeen=2026-05-15T12:34:56Z');
+    expect(result.body).toContain('replay/sess_a');
+    expect(result.body).toContain('replay/sess_b');
+  });
+
+  it('omits the Session recordings sub-list when none are provided', () => {
+    const result = buildFixPrTemplate({
+      ...baseFix,
+      posthogIssue: {
+        id: 'iss_abc123',
+        url: 'https://app.posthog.com/project/336884/error_tracking/iss_abc123',
+        name: 'Error',
+        occurrences: null,
+        affectedUsers: null,
+        firstSeen: '2026-05-15T12:34:56Z',
+        sessionRecordingUrls: [],
+      },
+    });
+    expect(result.body).toContain('## PostHog');
+    expect(result.body).not.toContain('Session recordings:');
+  });
 });
 
 describe('buildPrTemplate', () => {

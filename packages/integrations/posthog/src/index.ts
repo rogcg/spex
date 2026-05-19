@@ -14,6 +14,11 @@ export {
   type GetSessionRecordingOptions,
   type QueryEventsOptions,
 } from './operations.js';
+export {
+  buildPostHogBugSource,
+  type BuildPostHogBugSourceOptions,
+  type PostHogBugSource,
+} from './bug-source.js';
 export type {
   CreatePostHogMcpClientOptions,
   PostHogErrorIssue,

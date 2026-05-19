@@ -32,6 +32,20 @@ export interface FixPrInput {
   branch: string;
   baseBranch: string;
   commits: readonly PrCommitInfo[];
+  /**
+   * Optional PostHog error issue the fix was triggered for. Renders as a
+   * "PostHog" section with the issue link, telemetry counts, and any session
+   * recording URLs SPEX gathered while building the bug context.
+   */
+  posthogIssue?: {
+    id: string;
+    url: string;
+    name: string;
+    occurrences: number | null;
+    affectedUsers: number | null;
+    firstSeen: string;
+    sessionRecordingUrls: readonly string[];
+  };
 }
 
 export type PrDescriptionInput = FeaturePrInput | FixPrInput;
@@ -105,6 +119,10 @@ export function buildFixPrTemplate(input: FixPrInput): PrDescription {
     sections.push(`## Regression test\n\n\`${input.regressionTestPath}\``);
   }
 
+  if (input.posthogIssue) {
+    sections.push(buildPostHogSection(input.posthogIssue));
+  }
+
   const refs = buildReferences({
     featureSpecRelativePath: null,
     techSpecRelativePath: input.techSpecRelativePath,
@@ -115,6 +133,23 @@ export function buildFixPrTemplate(input: FixPrInput): PrDescription {
   sections.push(SPEX_FOOTER);
 
   return { title, body: sections.join('\n\n') };
+}
+
+function buildPostHogSection(issue: NonNullable<FixPrInput['posthogIssue']>): string {
+  const lines: string[] = [];
+  lines.push(`- **Issue:** [${issue.id}](${issue.url}) — ${issue.name}`);
+  const telemetry: string[] = [];
+  if (issue.occurrences !== null) telemetry.push(`occurrences=${issue.occurrences}`);
+  if (issue.affectedUsers !== null) telemetry.push(`affectedUsers=${issue.affectedUsers}`);
+  telemetry.push(`firstSeen=${issue.firstSeen}`);
+  lines.push(`- **Telemetry:** ${telemetry.join(', ')}`);
+  if (issue.sessionRecordingUrls.length > 0) {
+    lines.push('- **Session recordings:**');
+    for (const url of issue.sessionRecordingUrls) {
+      lines.push(`  - ${url}`);
+    }
+  }
+  return `## PostHog\n\n${lines.join('\n')}`;
 }
 
 function buildReferences(opts: {

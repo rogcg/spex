@@ -203,14 +203,14 @@ describe('collectBugContext — error paths', () => {
     ).rejects.toBeInstanceOf(PathOutsideProjectError);
   });
 
-  it('rejects non-manual error reference sources', async () => {
+  it('rejects error reference sources that are not yet wired (github)', async () => {
     await initRepo();
     await expect(
       collectBugContext({
         projectDir,
-        description: 'from posthog',
+        description: 'from github',
         affectedFiles: [],
-        errorReference: { source: 'posthog', id: 'evt-123' },
+        errorReference: { source: 'github', id: 'ghi-9' },
       }),
     ).rejects.toBeInstanceOf(UnsupportedErrorSourceError);
   });
@@ -226,6 +226,20 @@ describe('collectBugContext — error paths', () => {
     expect(context.errorReference).toEqual({
       source: 'manual',
       id: 'team-chat-2026-05-17',
+    });
+  });
+
+  it('accepts posthog error references and stores them on the context', async () => {
+    await initRepo();
+    const context = await collectBugContext({
+      projectDir,
+      description: 'from posthog',
+      affectedFiles: [],
+      errorReference: { source: 'posthog', id: 'iss_abc123' },
+    });
+    expect(context.errorReference).toEqual({
+      source: 'posthog',
+      id: 'iss_abc123',
     });
   });
 });

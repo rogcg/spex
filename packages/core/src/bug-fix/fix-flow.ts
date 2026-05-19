@@ -1,6 +1,7 @@
 import type {
   BugContext,
   BugErrorInfo,
+  ErrorReference,
   FixOption,
   FixProposal,
   Hypothesis,
@@ -48,6 +49,11 @@ export interface RunFixFlowOptions {
   description: string;
   affectedFiles?: readonly string[];
   error?: BugErrorInfo;
+  /**
+   * Provenance of the bug report (e.g. `{source: 'posthog', id: 'iss_…'}`).
+   * Recorded on the resulting `BugContext` and surfaced in PR descriptions.
+   */
+  errorReference?: ErrorReference;
   /** Maximum hypothesis attempts before giving up. Defaults to 3. */
   maxHypothesisAttempts?: number;
   /**
@@ -145,6 +151,7 @@ export async function runFixFlow(opts: RunFixFlowOptions): Promise<RunFixFlowRes
     description: opts.description,
     ...(opts.error ? { error: opts.error } : {}),
     ...(opts.affectedFiles ? { affectedFiles: opts.affectedFiles } : {}),
+    ...(opts.errorReference ? { errorReference: opts.errorReference } : {}),
   });
 
   // Phase 3: hypotheses
