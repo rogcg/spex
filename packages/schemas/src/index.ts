@@ -75,10 +75,14 @@ export {
   AiConfigSchema,
   GitHubIntegrationConfigSchema,
   IntegrationsConfigSchema,
+  LinearIntegrationConfigSchema,
+  LinearStatusMappingSchema,
   ReviewModeSchema,
   type AiConfig,
   type GitHubIntegrationConfig,
   type IntegrationsConfig,
+  type LinearIntegrationConfig,
+  type LinearStatusMapping,
   type ReviewMode,
 } from './ai-config.js';
 export {

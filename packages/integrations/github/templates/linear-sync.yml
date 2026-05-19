@@ -1,0 +1,81 @@
+# SPEX Linear sync workflow.
+#
+# Runs `spex linear-sync` against every `pull_request` event and updates
+# the linked Linear issue accordingly:
+#   - opened / reopened       → Linear issue → `In Review`
+#   - closed (merged=true)    → Linear issue → `Done`
+#   - closed (merged=false)   → Linear issue → `Todo` (+ comment)
+#
+# The Linear-id is extracted from the PR body first (looking for a
+# `Closes <ID>` reference, which the SPEX feature PR template emits when
+# the PR was generated via `spex implement --from-issue=<ID>`) and falls
+# back to the PR head branch name.
+#
+# Install source: SPEX is not on npm yet, so this workflow clones the
+# public repo `rogcg/spex` and builds from source. Once SPEX is
+# published, the "Checkout SPEX source" + "Setup pnpm" + "Install +
+# build" block can be replaced with a single `npm install -g spex` step.
+#
+# Requirements:
+#   - Repo secret LINEAR_API_KEY — generate one at
+#     https://linear.app/settings/api.
+#   - `.ai/config.yaml` with `integrations.linear.{team, status_mapping?}`
+#     so the workflow knows which Linear team this repo maps to and
+#     which workflow state names to use.
+#
+# Customise:
+#   - `SPEX_REF` env at the top pins which SPEX version this workflow
+#     uses. Default `main` tracks head; set to a tag (e.g. `v0.6.0`).
+#   - The workflow runs on all PRs by default. Add an `if:` guard at the
+#     job level if you only want it for SPEX-generated PRs (e.g. check
+#     for the `spex-generated` label).
+
+name: SPEX Linear Sync
+
+on:
+  pull_request:
+    types: [opened, reopened, closed]
+
+env:
+  SPEX_REPO: rogcg/spex
+  SPEX_REF: main
+
+jobs:
+  linear-sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+
+      - name: Checkout SPEX source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SPEX_REPO }}
+          ref: ${{ env.SPEX_REF }}
+          path: .spex-source
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: .spex-source/pnpm-lock.yaml
+
+      - name: Install + build SPEX
+        working-directory: .spex-source
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm -r build
+
+      - name: Run linear-sync
+        run: node "$GITHUB_WORKSPACE/.spex-source/packages/cli/dist/index.js" linear-sync --event-path "$GITHUB_EVENT_PATH"
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}

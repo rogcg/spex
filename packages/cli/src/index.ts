@@ -3,6 +3,7 @@ import { runFixCommand } from './commands/fix.js';
 import { runGithubSetupCommand } from './commands/github-setup.js';
 import { runImplementCommand } from './commands/implement.js';
 import { runInitCommand } from './commands/init.js';
+import { runLinearSyncCommand } from './commands/linear-sync.js';
 import { runMcpServerCommand } from './commands/mcp-server.js';
 import { runNewCommand } from './commands/new.js';
 import { runReviewCommand } from './commands/review.js';
@@ -157,6 +158,46 @@ github
       handleError(error);
     }
   });
+
+program
+  .command('linear-sync')
+  .description(STRINGS.linearSyncCommand.description)
+  .option('--event <event>', STRINGS.linearSyncCommand.eventFlagDescription)
+  .option('--event-path <path>', STRINGS.linearSyncCommand.eventPathFlagDescription)
+  .option('--linear-id <id>', STRINGS.linearSyncCommand.linearIdFlagDescription)
+  .option('--pr-number <number>', STRINGS.linearSyncCommand.prNumberFlagDescription)
+  .option('--pr-url <url>', STRINGS.linearSyncCommand.prUrlFlagDescription)
+  .option('--branch <ref>', STRINGS.linearSyncCommand.branchFlagDescription)
+  .option('--pr-body <text>', STRINGS.linearSyncCommand.prBodyFlagDescription)
+  .option('--dry-run', STRINGS.linearSyncCommand.dryRunFlagDescription)
+  .action(
+    async (opts: {
+      event?: string;
+      eventPath?: string;
+      linearId?: string;
+      prNumber?: string;
+      prUrl?: string;
+      branch?: string;
+      prBody?: string;
+      dryRun?: boolean;
+    }) => {
+      printBanner();
+      try {
+        await runLinearSyncCommand({
+          ...(opts.event !== undefined ? { event: opts.event } : {}),
+          ...(opts.eventPath !== undefined ? { eventPath: opts.eventPath } : {}),
+          ...(opts.linearId !== undefined ? { linearId: opts.linearId } : {}),
+          ...(opts.prNumber !== undefined ? { prNumber: Number(opts.prNumber) } : {}),
+          ...(opts.prUrl !== undefined ? { prUrl: opts.prUrl } : {}),
+          ...(opts.branch !== undefined ? { branch: opts.branch } : {}),
+          ...(opts.prBody !== undefined ? { prBody: opts.prBody } : {}),
+          ...(opts.dryRun ? { dryRun: true } : {}),
+        });
+      } catch (error) {
+        handleError(error);
+      }
+    },
+  );
 
 program
   .command('mcp-server')

@@ -7,9 +7,9 @@ import {
 } from './registry.js';
 
 describe('WORKFLOW_TEMPLATES', () => {
-  it('advertises both workflow templates by name', () => {
+  it('advertises all workflow templates by name', () => {
     const names = listWorkflowTemplates().map((t) => t.name);
-    expect(names).toEqual(['pr-review', 'implement-from-issue']);
+    expect(names).toEqual(['pr-review', 'implement-from-issue', 'linear-sync']);
   });
 
   it('each template has a non-empty description', () => {
@@ -58,6 +58,19 @@ describe('getWorkflowTemplate', () => {
     // working tree; .spex-source/ must be excluded so the check passes.
     expect(tpl.content).toContain('.spex-source/');
     expect(tpl.content).toContain('.git/info/exclude');
+  });
+
+  it('returns the linear-sync template with valid-looking content', async () => {
+    const tpl = await getWorkflowTemplate('linear-sync');
+    expect(tpl.name).toBe('linear-sync');
+    expect(tpl.filename).toBe('linear-sync.yml');
+    expect(tpl.content).toContain('name: SPEX Linear Sync');
+    expect(tpl.content).toContain('pull_request');
+    expect(tpl.content).toContain('spex linear-sync');
+    expect(tpl.content).toContain('LINEAR_API_KEY');
+    expect(tpl.content).toContain('SPEX_REPO: rogcg/spex');
+    expect(tpl.content).toContain('SPEX_REF: main');
+    expect(tpl.content).toContain('--event-path');
   });
 
   it('throws UnknownWorkflowTemplateError for an unknown name', async () => {

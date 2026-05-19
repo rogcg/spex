@@ -18,6 +18,17 @@ export {
   type ListLinearIssuesOptions,
   type UpdateLinearIssueStatusOptions,
 } from './operations.js';
+export {
+  extractLinearId,
+  extractLinearIdFromBranch,
+  extractLinearIdFromPrBody,
+  syncPrEventToLinear,
+  type ExtractLinearIdOptions,
+  type PrEvent,
+  type PrEventKind,
+  type SyncPrEventOptions,
+  type SyncPrEventResult,
+} from './sync.js';
 export type {
   CreateLinearMcpClientOptions,
   LinearComment,

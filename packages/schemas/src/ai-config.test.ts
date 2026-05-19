@@ -70,6 +70,62 @@ describe('GitHubIntegrationConfigSchema', () => {
   });
 });
 
+describe('LinearIntegrationConfigSchema', () => {
+  it('applies defaults for status mapping and comment_on_unmerged_close', () => {
+    // Need to access the schema via AiConfigSchema since LinearIntegrationConfigSchema
+    // is not re-exported here; cover via parent.
+    const parsed = AiConfigSchema.parse({
+      integrations: { linear: { team: 'SPX' } },
+    });
+    expect(parsed.integrations?.linear?.team).toBe('SPX');
+    expect(parsed.integrations?.linear?.status_mapping.in_progress).toBe('In Progress');
+    expect(parsed.integrations?.linear?.status_mapping.in_review).toBe('In Review');
+    expect(parsed.integrations?.linear?.status_mapping.done).toBe('Done');
+    expect(parsed.integrations?.linear?.status_mapping.todo).toBe('Todo');
+    expect(parsed.integrations?.linear?.comment_on_unmerged_close).toBe(true);
+  });
+
+  it('honours custom status mapping values', () => {
+    const parsed = AiConfigSchema.parse({
+      integrations: {
+        linear: {
+          team: 'SPX',
+          status_mapping: {
+            in_progress: 'Working',
+            in_review: 'Code Review',
+            done: 'Shipped',
+            todo: 'Backlog',
+          },
+        },
+      },
+    });
+    expect(parsed.integrations?.linear?.status_mapping.in_progress).toBe('Working');
+    expect(parsed.integrations?.linear?.status_mapping.in_review).toBe('Code Review');
+    expect(parsed.integrations?.linear?.status_mapping.done).toBe('Shipped');
+    expect(parsed.integrations?.linear?.status_mapping.todo).toBe('Backlog');
+  });
+
+  it('rejects empty team', () => {
+    expect(() => AiConfigSchema.parse({ integrations: { linear: { team: '' } } })).toThrow();
+  });
+
+  it('rejects empty status_mapping values', () => {
+    expect(() =>
+      AiConfigSchema.parse({
+        integrations: { linear: { team: 'SPX', status_mapping: { in_progress: '' } } },
+      }),
+    ).toThrow();
+  });
+
+  it('rejects unknown keys (strict)', () => {
+    expect(() =>
+      AiConfigSchema.parse({
+        integrations: { linear: { team: 'SPX', extra: true } },
+      }),
+    ).toThrow();
+  });
+});
+
 describe('AiConfigSchema', () => {
   it('accepts an empty config (no integrations)', () => {
     const parsed = AiConfigSchema.parse({});

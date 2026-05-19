@@ -14,6 +14,12 @@ export const WORKFLOW_TEMPLATES = [
     filename: 'implement-from-issue.yml',
     description: 'Implement an issue when the `spex:implement` label is applied.',
   },
+  {
+    name: 'linear-sync',
+    filename: 'linear-sync.yml',
+    description:
+      'Sync PR lifecycle events to the linked Linear issue (opened → In Review, merged → Done, closed → Todo).',
+  },
 ] as const;
 
 export type WorkflowTemplateName = (typeof WORKFLOW_TEMPLATES)[number]['name'];

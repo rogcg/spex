@@ -309,6 +309,41 @@ export const STRINGS = {
       `\nError: branch was pushed but creating the PR failed. ${message}\nOpen the PR manually from the GitHub UI.`,
   },
 
+  linearSyncCommand: {
+    description:
+      'Sync a GitHub PR lifecycle event to the linked Linear issue (intended for use inside a workflow)',
+    eventFlagDescription: 'PR event kind: opened | merged | closed_unmerged',
+    eventPathFlagDescription:
+      'path to a GitHub Actions `pull_request` event payload (typically $GITHUB_EVENT_PATH)',
+    linearIdFlagDescription: 'override Linear issue id (e.g. SPX-47); otherwise auto-detected',
+    prNumberFlagDescription: 'PR number (auto-detected from --event-path when omitted)',
+    prUrlFlagDescription: 'PR URL (auto-detected from --event-path when omitted)',
+    branchFlagDescription: 'PR head branch name (used as a Linear-id extraction fallback)',
+    prBodyFlagDescription: 'PR body text (used to find a `Closes <ID>` reference)',
+    dryRunFlagDescription: 'log the planned change without calling Linear',
+
+    invalidConfig: (issues: readonly string[]) =>
+      `Error: .ai/config.yaml is invalid:\n${issues.map((i) => `  - ${i}`).join('\n')}`,
+    integrationNotConfigured:
+      'Error: Linear integration not configured. Add `integrations.linear.{team: <KEY>}` to .ai/config.yaml.',
+    invalidEvent: (raw: string) =>
+      `Error: --event "${raw}" is not valid. Expected one of: opened | merged | closed_unmerged.`,
+    missingEvent: 'Error: pass either --event or --event-path.',
+    eventPayloadFailed: (path: string, reason: string) =>
+      `Error: failed to read GitHub event payload at ${path}: ${reason}`,
+    missingPrFields:
+      'Error: PR number and PR URL are required. Pass --pr-number/--pr-url or --event-path.',
+    missingApiKey:
+      'Error: LINEAR_API_KEY is not set. Add it to repo secrets and pass it through to the workflow step.',
+    noLinearIssueDetected: 'No Linear issue id detected in the PR body or branch — skipping sync.',
+    dryRun: (opts: { event: string; linearId: string; prNumber: number; prUrl: string }) =>
+      `[dry-run] would sync ${opts.linearId} ← event=${opts.event}, PR=#${opts.prNumber} (${opts.prUrl})`,
+    syncing: (id: string, event: string) => `Syncing ${id} ← event=${event}...`,
+    synced: (opts: { linearId: string; status: string }) => `  ✓ ${opts.linearId} → ${opts.status}`,
+    commentPosted: (url: string) => `  ✓ Comment posted: ${url}`,
+    syncFailed: (message: string) => `Error: linear sync failed: ${message}`,
+  },
+
   errors: {
     missingApiKey: (envVar: string) =>
       `Error: ${envVar} is not set. Set it in your environment or a .env file before running spex new.`,
