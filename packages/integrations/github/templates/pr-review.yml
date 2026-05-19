@@ -4,14 +4,19 @@
 # structured review comment that scores the PR on spec compliance,
 # conventions, performance/security, and test coverage.
 #
+# Install source: SPEX is not on npm yet, so this workflow clones the
+# public repo `rogcg/spex` and builds from source. Once SPEX is published,
+# this entire "Checkout SPEX source" + "Setup pnpm" + "Install + build"
+# block can be replaced with a single `npm install -g spex` step.
+#
 # Requirements:
 #   - Repo secret ANTHROPIC_API_KEY — used by SPEX to call Claude.
 #   - Default GITHUB_TOKEN — already provided by GitHub Actions; the workflow
 #     uses it to fetch the PR diff and post the review comment.
-#   - SPEX must be published to npm (v0.5.0+). The `npm install -g spex` line
-#     below assumes the public package name.
 #
 # Customise:
+#   - `SPEX_REF` env at the top pins which SPEX version this workflow uses.
+#     Default `main` tracks head; set to a tag (e.g. `v0.5.0`) for stability.
 #   - Change `types: [opened, reopened, ready_for_review]` to match when you
 #     want SPEX to chime in. For example, drop `reopened` if reopens are rare.
 #   - Add `if: github.actor != 'dependabot[bot]'` to skip bot PRs.
@@ -22,6 +27,10 @@ on:
   pull_request:
     types: [opened, reopened, ready_for_review]
 
+env:
+  SPEX_REPO: rogcg/spex
+  SPEX_REF: main
+
 jobs:
   review:
     runs-on: ubuntu-latest
@@ -29,21 +38,38 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - name: Checkout
+      - name: Checkout target repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Checkout SPEX source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SPEX_REPO }}
+          ref: ${{ env.SPEX_REF }}
+          path: .spex-source
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: .spex-source/pnpm-lock.yaml
 
-      - name: Install SPEX
-        run: npm install -g spex
+      - name: Install + build SPEX
+        working-directory: .spex-source
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm -r build
 
       - name: Run review
-        run: spex review "${{ github.event.pull_request.html_url }}" --auto
+        run: node "$GITHUB_WORKSPACE/.spex-source/packages/cli/dist/index.js" review "${{ github.event.pull_request.html_url }}" --auto
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

@@ -29,6 +29,13 @@ describe('getWorkflowTemplate', () => {
     expect(tpl.content).toContain('spex review');
     expect(tpl.content).toContain('GITHUB_TOKEN');
     expect(tpl.content).toContain('ANTHROPIC_API_KEY');
+    // Installs SPEX from the public GitHub repo (not npm — see SPX-46 / release sprint).
+    expect(tpl.content).toContain('SPEX_REPO: rogcg/spex');
+    expect(tpl.content).toContain('SPEX_REF: main');
+    expect(tpl.content).toContain('pnpm/action-setup@v4');
+    expect(tpl.content).toContain('pnpm install --frozen-lockfile');
+    expect(tpl.content).toContain('pnpm -r build');
+    expect(tpl.content).toContain('packages/cli/dist/index.js');
   });
 
   it('returns the implement-from-issue template with valid-looking content', async () => {
@@ -40,6 +47,13 @@ describe('getWorkflowTemplate', () => {
     expect(tpl.content).toContain('spex implement');
     expect(tpl.content).toContain('GITHUB_TOKEN');
     expect(tpl.content).toContain('ANTHROPIC_API_KEY');
+    // Installs SPEX from the public GitHub repo (not npm — see SPX-46 / release sprint).
+    expect(tpl.content).toContain('SPEX_REPO: rogcg/spex');
+    expect(tpl.content).toContain('SPEX_REF: main');
+    expect(tpl.content).toContain('pnpm/action-setup@v4');
+    expect(tpl.content).toContain('pnpm install --frozen-lockfile');
+    expect(tpl.content).toContain('pnpm -r build');
+    expect(tpl.content).toContain('packages/cli/dist/index.js');
   });
 
   it('throws UnknownWorkflowTemplateError for an unknown name', async () => {
