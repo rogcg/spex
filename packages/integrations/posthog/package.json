@@ -1,0 +1,43 @@
+{
+  "name": "@spex/integrations-posthog",
+  "version": "0.6.0",
+  "private": true,
+  "description": "PostHog integration for SPEX — MCP client wrapper for the official PostHog MCP server (error tracking, events, session recordings)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rogcg/spex.git",
+    "directory": "packages/integrations/posthog"
+  },
+  "homepage": "https://github.com/rogcg/spex#readme",
+  "bugs": {
+    "url": "https://github.com/rogcg/spex/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@spex/core": "workspace:*",
+    "@spex/schemas": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
