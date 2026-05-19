@@ -30,11 +30,11 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Typecheck
-        run: pnpm typecheck
-
       - name: Build
         run: pnpm -r run build
+
+      - name: Typecheck
+        run: pnpm typecheck
 
       - name: Test
         run: pnpm -r run test
