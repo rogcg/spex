@@ -12,7 +12,7 @@ import type {
 
 const DEFAULT_BASE_URL = 'https://mcp.posthog.com/mcp';
 const DEFAULT_CLIENT_NAME = 'spex';
-const DEFAULT_CLIENT_VERSION = '0.6.0';
+const DEFAULT_CLIENT_VERSION = '0.7.0';
 const API_KEY_ENV_VAR = 'POSTHOG_API_KEY';
 const PROJECT_ID_ENV_VAR = 'POSTHOG_PROJECT_ID';
 

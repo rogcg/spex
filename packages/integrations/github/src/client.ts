@@ -9,7 +9,7 @@ import { SpexError } from '@spex/core';
 const OctokitWithRetry = Octokit.plugin(retry);
 
 const DEFAULT_RETRIES = 3;
-const DEFAULT_USER_AGENT_PREFIX = 'spex/0.6.0';
+const DEFAULT_USER_AGENT_PREFIX = 'spex/0.7.0';
 
 export class MissingGitHubTokenError extends SpexError {
   readonly envVar: string;

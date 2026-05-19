@@ -9,6 +9,60 @@ While SPEX is on `0.x`, any minor release may contain breaking changes to CLI
 flags, `.ai/` artifact formats, MCP tool shapes, or schema definitions. Pin to
 a specific version (or commit SHA, until npm publish) if you need stability.
 
+## [0.7.0] — 2026-05-19
+
+### Added — PostHog integration
+
+- New workspace package `@spex/integrations-posthog` wrapping the official
+  PostHog MCP server (`https://mcp.posthog.com/mcp`). Architecture mirrors
+  `@spex/integrations-linear` shipped in 0.6.0: a pooled
+  `createPostHogMcpClient` keyed by `(baseUrl, apiKey-SHA-256-fingerprint)`,
+  HTTPS-or-localhost enforcement, secret hygiene tests, env-driven
+  `POSTHOG_API_KEY` + optional `POSTHOG_PROJECT_ID` defaults.
+- Core operations: `getErrorIssue`, `queryEvents` (HogQL via `query-run`),
+  `getSessionRecording`. Domain types pared down to the fields a bug-fix
+  pipeline actually needs (stack frames, occurrence count, affected users,
+  first/last seen, session metadata).
+- `buildPostHogBugSource` — single-shot helper that fetches an issue and the
+  surrounding `$exception` events, returning a `{description, errorMessage,
+  errorStack, sessionRecordingUrls, firstOccurrence}` bundle ready to drop
+  into the `spex fix` pipeline. Recording URLs are deduplicated, capped to
+  3 by default, and gracefully fall back to empty when the events query
+  fails (e.g. PostHog hasn't ingested `$exception` yet).
+- New `spex fix --from-error=posthog:<issue-id>` flag (bare `<issue-id>`
+  defaults to posthog) that pulls the bug-context bundle from PostHog,
+  threads `errorReference` through `runFixFlow`, and renders a `## PostHog`
+  section in the auto-generated PR description with the issue link,
+  telemetry counts, and session recording deep-links.
+- New `spex posthog-webhook` command — parses a PostHog error-tracking
+  webhook payload (the `new_issue` / `regression` destination shape, plus
+  fallback to event-action webhooks carrying `$exception_issue_id`),
+  applies the `.ai/config.yaml` filter, and on a trigger decision invokes
+  `spex fix --from-error=posthog:<id> --auto`. Regressions are
+  unconditionally skipped — re-firing of a resolved issue is too risky for
+  an unattended AI fix. Includes HMAC-SHA256 signature verification with
+  `timingSafeEqual` comparison.
+- New `.ai/config.yaml` block: `integrations.posthog.auto_fix.{enabled,
+  severity, min_occurrences}` with sensible defaults
+  (`enabled=false` — opt in explicitly, `severity=['critical']`,
+  `min_occurrences=5`).
+- `collectBugContext` now formally accepts `errorReference.source =
+  'posthog'` (previously thrown). `runFixFlow` accepts and threads an
+  `errorReference` through to the collector.
+
+### Verified
+
+- 90 CLI tests + 45 PostHog package tests + 70 GitHub package tests pass.
+  Live PostHog round-trip validation (real error-tracking issue + real
+  webhook delivery) is gated behind a user-configured PostHog project and
+  is tracked as a follow-up smoke test rather than CI scope.
+
+### Known issues
+
+- Unchanged from 0.5.0: `src/logger/logger.test.ts` and
+  `src/implementation/safety.test.ts` flake on Windows due to pino file
+  handle race + drive-letter resolution differences. Pass on Linux CI.
+
 ## [0.5.2] — 2026-05-19
 
 ### Fixed
@@ -194,6 +248,7 @@ a specific version (or commit SHA, until npm publish) if you need stability.
 - CI workflow (`.github/workflows/ci.yml`) running install, lint,
   typecheck, test on push + PR.
 
+[0.7.0]: https://github.com/rogcg/spex/releases/tag/v0.7.0
 [0.5.2]: https://github.com/rogcg/spex/releases/tag/v0.5.2
 [0.5.1]: https://github.com/rogcg/spex/releases/tag/v0.5.1
 [0.5.0]: https://github.com/rogcg/spex/releases/tag/v0.5.0
