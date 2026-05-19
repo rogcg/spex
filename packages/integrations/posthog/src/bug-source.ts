@@ -1,4 +1,4 @@
-import { getErrorIssue, queryEvents } from './operations.js';
+import { getErrorIssue, getIssueEvents } from './operations.js';
 import type {
   PostHogErrorIssue,
   PostHogErrorStackFrame,
@@ -57,10 +57,8 @@ export interface BuildPostHogBugSourceOptions {
 
 const DEFAULT_MAX_RECORDINGS = 3;
 const DEFAULT_LOOKBACK_DAYS = 7;
-// PostHog stores the matching URL on `$session_id` (for the recording id) and
-// on `$current_url` (for the page when the error fired). We surface whatever
-// is present, preferring a PostHog Replay deep-link when we can construct one.
 const SESSION_ID_PROPS = ['$session_id', 'sessionId'] as const;
+const POSTHOG_REPLAY_HOST = 'https://us.posthog.com';
 
 /**
  * Fetch a PostHog error issue and the small surrounding context SPEX needs to
@@ -173,30 +171,21 @@ interface CollectRecordingsArgs {
 async function collectSessionRecordingUrls(
   args: CollectRecordingsArgs,
 ): Promise<readonly string[]> {
-  // HogQL: pull recent $exception events tagged with this issue. PostHog
-  // exposes the issue id as `properties.$exception_issue_id` (see
-  // https://posthog.com/docs/error-tracking).
-  const query = [
-    'SELECT *',
-    'FROM events',
-    "WHERE event = '$exception'",
-    `  AND properties.\`$exception_issue_id\` = '${escapeSingleQuotes(args.issueId)}'`,
-    `  AND timestamp > now() - INTERVAL ${args.lookbackDays} DAY`,
-    'ORDER BY timestamp DESC',
-    `LIMIT ${args.maxRecordings * 4}`,
-  ].join('\n');
-
+  // Use the purpose-built `query-error-tracking-issue-events` tool — it
+  // filters on the server side by issueId, no HogQL needed.
   let events: PostHogEvent[];
   try {
-    events = await queryEvents({
+    events = await getIssueEvents({
       client: args.client,
-      query,
-      limit: args.maxRecordings * 4,
+      issueId: args.issueId,
+      limit: Math.min(20, Math.max(args.maxRecordings * 4, 5)),
+      verbosity: 'summary',
+      dateFrom: `-${args.lookbackDays}d`,
     });
   } catch {
     // PostHog rejected the query (most often because the project hasn't
-    // ingested $exception events). Return no recordings rather than failing
-    // the whole bug-source build — the description is still useful.
+    // ingested $exception events yet). Return no recordings rather than
+    // failing the whole bug-source build — the description is still useful.
     return [];
   }
 
@@ -217,10 +206,11 @@ function sessionRecordingUrl(event: PostHogEvent, client: PostHogMcpClient): str
   // Prefer the explicitly tagged URL when PostHog provides one.
   const explicit = event.properties.$session_recording_url;
   if (typeof explicit === 'string' && explicit.startsWith('http')) return explicit;
-  // Otherwise synthesize the standard PostHog Replay URL.
+  // Otherwise synthesize the standard PostHog Replay URL. Project scoping is
+  // required for the URL to be deep-linkable; without a project id, drop it.
   const projectId = client.projectId;
   if (projectId === undefined) return null;
-  return `https://app.posthog.com/project/${projectId}/replay/${sessionId}`;
+  return `${POSTHOG_REPLAY_HOST}/project/${projectId}/replay/${sessionId}`;
 }
 
 function extractSessionId(props: Record<string, unknown>): string | null {
@@ -229,9 +219,4 @@ function extractSessionId(props: Record<string, unknown>): string | null {
     if (typeof value === 'string' && value.length > 0) return value;
   }
   return null;
-}
-
-function escapeSingleQuotes(value: string): string {
-  // HogQL uses backslash-escaped single quotes inside string literals.
-  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }

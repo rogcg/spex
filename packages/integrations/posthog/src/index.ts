@@ -5,12 +5,15 @@ export {
   InsecurePostHogEndpointError,
 } from './client.js';
 export {
+  DEFAULT_TOOL_CONTEXT,
   getErrorIssue,
+  getIssueEvents,
   getSessionRecording,
   POSTHOG_TOOLS,
   PostHogToolError,
   queryEvents,
   type GetErrorIssueOptions,
+  type GetIssueEventsOptions,
   type GetSessionRecordingOptions,
   type QueryEventsOptions,
 } from './operations.js';

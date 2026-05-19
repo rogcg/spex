@@ -27,35 +27,35 @@ const issuePayload = {
   id: 'iss_abc123',
   name: 'TypeError: cannot read property "id" of undefined',
   description: 'Thrown from `renderInvoice` when invoice payload is missing line items.',
-  url: 'https://app.posthog.com/project/336884/error_tracking/iss_abc123',
+  _posthogUrl: 'https://us.posthog.com/project/431680/error_tracking/iss_abc123',
   status: 'active',
-  firstSeen: '2026-05-15T12:34:56Z',
-  lastSeen: '2026-05-19T08:12:30Z',
-  occurrences: 142,
-  affectedUsers: 37,
-  stack: [
-    {
-      file: 'src/invoice/render.ts',
-      function: 'renderInvoice',
-      line: 88,
-      column: 14,
-      source: 'const id = invoice.lineItems[0].id;',
-    },
-    {
-      file: 'src/handlers/invoice.ts',
-      function: 'handleInvoicePost',
-      line: 24,
-      column: 9,
-      source: null,
-    },
-  ],
+  first_seen: '2026-05-15T12:34:56Z',
+  last_seen: '2026-05-19T08:12:30Z',
+  aggregations: { occurrences: 142, users: 37, sessions: 41 },
+  latestEvent: {
+    stack: [
+      {
+        filename: 'src/invoice/render.ts',
+        function: 'renderInvoice',
+        lineno: 88,
+        colno: 14,
+        context_line: 'const id = invoice.lineItems[0].id;',
+      },
+      {
+        filename: 'src/handlers/invoice.ts',
+        function: 'handleInvoicePost',
+        lineno: 24,
+        colno: 9,
+      },
+    ],
+  },
 };
 
 const eventWithSessionPayload = {
-  id: 'evt_1',
+  uuid: 'evt_1',
   event: '$exception',
   timestamp: '2026-05-19T08:12:30Z',
-  distinctId: 'user_42',
+  distinct_id: 'user_42',
   properties: {
     $session_id: 'sess_zzz1',
     $exception_issue_id: 'iss_abc123',
@@ -63,7 +63,7 @@ const eventWithSessionPayload = {
 };
 
 describe('buildPostHogBugSource', () => {
-  it('fetches the issue, queries events, and builds a description from both', async () => {
+  it('fetches the issue, fetches issue events, and builds a description from both', async () => {
     const callTool = vi
       .fn()
       .mockResolvedValueOnce({ content: [], structuredContent: issuePayload, isError: false })
@@ -72,35 +72,32 @@ describe('buildPostHogBugSource', () => {
         structuredContent: { events: [eventWithSessionPayload] },
         isError: false,
       });
-    const client = makeClient(callTool, { projectId: '336884' });
+    const client = makeClient(callTool, { projectId: '431680' });
 
     const source = await buildPostHogBugSource({ client, issueId: 'iss_abc123' });
 
-    expect(callTool).toHaveBeenNthCalledWith(1, {
-      name: POSTHOG_TOOLS.getErrorIssue,
-      arguments: { id: 'iss_abc123', projectId: '336884' },
-    });
-    expect(callTool.mock.calls[1]?.[0].name).toBe(POSTHOG_TOOLS.runQuery);
+    expect(callTool.mock.calls[0]?.[0].name).toBe(POSTHOG_TOOLS.getErrorIssue);
+    expect(callTool.mock.calls[1]?.[0].name).toBe(POSTHOG_TOOLS.errorIssueEvents);
     expect(source.issue.id).toBe('iss_abc123');
     expect(source.firstOccurrence).toBe('2026-05-15T12:34:56Z');
     expect(source.errorMessage).toBe('TypeError: cannot read property "id" of undefined');
     expect(source.errorStack).toContain('renderInvoice');
     expect(source.errorStack).toContain('src/invoice/render.ts:88:14');
     expect(source.sessionRecordingUrls).toEqual([
-      'https://app.posthog.com/project/336884/replay/sess_zzz1',
+      'https://us.posthog.com/project/431680/replay/sess_zzz1',
     ]);
     expect(source.description).toContain('occurrences=142');
     expect(source.description).toContain('affectedUsers=37');
-    expect(source.description).toContain(issuePayload.url);
+    expect(source.description).toContain(issuePayload._posthogUrl);
     expect(source.description).toContain('Session recordings:');
     expect(source.description).toContain('replay/sess_zzz1');
   });
 
-  it('skips the events query when maxSessionRecordings is 0', async () => {
+  it('skips the events call when maxSessionRecordings is 0', async () => {
     const callTool = vi
       .fn()
       .mockResolvedValueOnce({ content: [], structuredContent: issuePayload, isError: false });
-    const client = makeClient(callTool, { projectId: '336884' });
+    const client = makeClient(callTool, { projectId: '431680' });
 
     const source = await buildPostHogBugSource({
       client,
@@ -113,19 +110,18 @@ describe('buildPostHogBugSource', () => {
     expect(source.description).not.toContain('Session recordings:');
   });
 
-  it('falls back to no recordings if the events query rejects (e.g. unknown property)', async () => {
+  it('falls back to no recordings if the events call rejects', async () => {
     const callTool = vi
       .fn()
       .mockResolvedValueOnce({ content: [], structuredContent: issuePayload, isError: false })
       .mockResolvedValueOnce({
-        content: [{ type: 'text', text: 'unknown property $exception_issue_id' }],
+        content: [{ type: 'text', text: 'unknown error' }],
         isError: true,
       });
-    const client = makeClient(callTool, { projectId: '336884' });
+    const client = makeClient(callTool, { projectId: '431680' });
 
     const source = await buildPostHogBugSource({ client, issueId: 'iss_abc123' });
     expect(source.sessionRecordingUrls).toEqual([]);
-    // Description should still include the rest of the issue context.
     expect(source.description).toContain('occurrences=142');
   });
 
@@ -137,28 +133,28 @@ describe('buildPostHogBugSource', () => {
         content: [],
         structuredContent: {
           events: [
-            { ...eventWithSessionPayload, id: 'evt_1' },
-            { ...eventWithSessionPayload, id: 'evt_2' },
+            { ...eventWithSessionPayload, uuid: 'evt_1' },
+            { ...eventWithSessionPayload, uuid: 'evt_2' },
             {
               ...eventWithSessionPayload,
-              id: 'evt_3',
+              uuid: 'evt_3',
               properties: { $session_id: 'sess_two', $exception_issue_id: 'iss_abc123' },
             },
             {
               ...eventWithSessionPayload,
-              id: 'evt_4',
+              uuid: 'evt_4',
               properties: { $session_id: 'sess_three', $exception_issue_id: 'iss_abc123' },
             },
             {
               ...eventWithSessionPayload,
-              id: 'evt_5',
+              uuid: 'evt_5',
               properties: { $session_id: 'sess_four', $exception_issue_id: 'iss_abc123' },
             },
           ],
         },
         isError: false,
       });
-    const client = makeClient(callTool, { projectId: '336884' });
+    const client = makeClient(callTool, { projectId: '431680' });
 
     const source = await buildPostHogBugSource({
       client,
@@ -166,8 +162,8 @@ describe('buildPostHogBugSource', () => {
       maxSessionRecordings: 2,
     });
     expect(source.sessionRecordingUrls).toEqual([
-      'https://app.posthog.com/project/336884/replay/sess_zzz1',
-      'https://app.posthog.com/project/336884/replay/sess_two',
+      'https://us.posthog.com/project/431680/replay/sess_zzz1',
+      'https://us.posthog.com/project/431680/replay/sess_two',
     ]);
   });
 
@@ -180,21 +176,22 @@ describe('buildPostHogBugSource', () => {
         structuredContent: {
           events: [
             {
-              id: 'evt_with_explicit',
+              uuid: 'evt_with_explicit',
               event: '$exception',
               timestamp: '2026-05-19T08:12:30Z',
-              distinctId: 'user_42',
+              distinct_id: 'user_42',
               properties: {
                 $session_id: 'sess_zzz1',
                 $exception_issue_id: 'iss_abc123',
-                $session_recording_url: 'https://other.posthog.io/replay/sess_zzz1?token=xyz',
+                $session_recording_url:
+                  'https://other.posthog.io/replay/sess_zzz1?token=xyz',
               },
             },
           ],
         },
         isError: false,
       });
-    const client = makeClient(callTool, { projectId: '336884' });
+    const client = makeClient(callTool, { projectId: '431680' });
     const source = await buildPostHogBugSource({ client, issueId: 'iss_abc123' });
     expect(source.sessionRecordingUrls).toEqual([
       'https://other.posthog.io/replay/sess_zzz1?token=xyz',
@@ -216,30 +213,12 @@ describe('buildPostHogBugSource', () => {
     expect(source.sessionRecordingUrls).toEqual([]);
   });
 
-  it('escapes single quotes in the issue id when building the HogQL query', async () => {
-    const callTool = vi
-      .fn()
-      .mockResolvedValueOnce({ content: [], structuredContent: issuePayload, isError: false })
-      .mockResolvedValueOnce({
-        content: [],
-        structuredContent: { events: [] },
-        isError: false,
-      });
-    const client = makeClient(callTool, { projectId: '336884' });
-
-    await buildPostHogBugSource({ client, issueId: "iss'a\\b" });
-
-    const args = callTool.mock.calls[1]?.[0].arguments as Record<string, unknown>;
-    const query = (args.query as { query: string }).query;
-    expect(query).toContain("'iss\\'a\\\\b'");
-  });
-
   it('omits stack section from description when issue has no stack frames', async () => {
     const callTool = vi
       .fn()
       .mockResolvedValueOnce({
         content: [],
-        structuredContent: { ...issuePayload, stack: [] },
+        structuredContent: { ...issuePayload, latestEvent: { stack: [] } },
         isError: false,
       })
       .mockResolvedValueOnce({
@@ -247,7 +226,7 @@ describe('buildPostHogBugSource', () => {
         structuredContent: { events: [] },
         isError: false,
       });
-    const client = makeClient(callTool, { projectId: '336884' });
+    const client = makeClient(callTool, { projectId: '431680' });
     const source = await buildPostHogBugSource({ client, issueId: 'iss_abc123' });
     expect(source.description).not.toContain('Stack:');
     expect(source.errorStack).toBeUndefined();
