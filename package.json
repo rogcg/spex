@@ -1,0 +1,41 @@
+{
+  "name": "spex",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Spec-driven Programming EXecutor — AI agent orchestration framework",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rogcg/spex.git"
+  },
+  "homepage": "https://github.com/rogcg/spex#readme",
+  "bugs": {
+    "url": "https://github.com/rogcg/spex/issues"
+  },
+  "keywords": [
+    "spec-driven",
+    "ai",
+    "code-generation",
+    "claude",
+    "anthropic",
+    "mcp",
+    "agent",
+    "orchestration"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "biome check .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,26 @@
+export {
+  SPEX_MCP_SERVER_NAME,
+  SPEX_MCP_SERVER_VERSION,
+  createSpexMcpServer,
+  startMcpServer,
+  type CreateSpexMcpServerOptions,
+  type StartMcpServerOptions,
+} from './server.js';
+export {
+  ALL_TOOL_DEFINITIONS,
+  registerTools,
+  spexNewToolDefinition,
+  spexImplementToolDefinition,
+  spexFixToolDefinition,
+  spexReviewToolDefinition,
+  SpexNewInputSchema,
+  SpexImplementInputSchema,
+  SpexFixInputSchema,
+  SpexReviewInputSchema,
+  type SpexNewInput,
+  type SpexImplementInput,
+  type SpexFixInput,
+  type SpexReviewInput,
+  type ToolDefinition,
+  type ToolDependencies,
+} from './tools/index.js';

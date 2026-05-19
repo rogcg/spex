@@ -1,0 +1,45 @@
+{
+  "name": "@spex/integrations-github",
+  "version": "0.4.0",
+  "private": true,
+  "description": "GitHub integration for SPEX — Octokit client + PR/branch/issue operations",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rogcg/spex.git",
+    "directory": "packages/integrations/github"
+  },
+  "homepage": "https://github.com/rogcg/spex#readme",
+  "bugs": {
+    "url": "https://github.com/rogcg/spex/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@octokit/plugin-retry": "^7.1.0",
+    "@octokit/rest": "^22.0.0",
+    "@spex/core": "workspace:*",
+    "@spex/schemas": "workspace:*",
+    "execa": "^9.5.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

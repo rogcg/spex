@@ -1,0 +1,50 @@
+{
+  "name": "@spex/core",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Core orchestration library for SPEX — LLM, discovery, tech-spec, scaffold",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rogcg/spex.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/rogcg/spex#readme",
+  "bugs": {
+    "url": "https://github.com/rogcg/spex/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.0",
+    "@inquirer/prompts": "^7.2.0",
+    "@spex/schemas": "workspace:*",
+    "ai": "^5.0.0",
+    "diff": "^9.0.0",
+    "execa": "^9.5.2",
+    "ignore": "^7.0.5",
+    "pino": "^9.5.0",
+    "yaml": "^2.6.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/diff": "^8.0.0",
+    "@types/node": "^22.10.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

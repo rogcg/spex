@@ -1,0 +1,49 @@
+# SPEX auto-review workflow.
+#
+# Runs `spex review` against every newly opened pull request. Posts a
+# structured review comment that scores the PR on spec compliance,
+# conventions, performance/security, and test coverage.
+#
+# Requirements:
+#   - Repo secret ANTHROPIC_API_KEY — used by SPEX to call Claude.
+#   - Default GITHUB_TOKEN — already provided by GitHub Actions; the workflow
+#     uses it to fetch the PR diff and post the review comment.
+#   - SPEX must be published to npm (v0.5.0+). The `npm install -g spex` line
+#     below assumes the public package name.
+#
+# Customise:
+#   - Change `types: [opened, reopened, ready_for_review]` to match when you
+#     want SPEX to chime in. For example, drop `reopened` if reopens are rare.
+#   - Add `if: github.actor != 'dependabot[bot]'` to skip bot PRs.
+
+name: SPEX Review
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install SPEX
+        run: npm install -g spex
+
+      - name: Run review
+        run: spex review "${{ github.event.pull_request.html_url }}" --auto
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

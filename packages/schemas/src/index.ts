@@ -1,0 +1,95 @@
+export {
+  TechSpecSchema,
+  TechSpecInferenceSchema,
+  type TechSpec,
+  type TechSpecInference,
+} from './tech-spec.js';
+export {
+  FEATURE_SLUG_PATTERN,
+  FeatureFileChangeSchema,
+  FeatureFileOperationSchema,
+  FeatureSpecSchema,
+  type FeatureFileChange,
+  type FeatureFileOperation,
+  type FeatureSpec,
+} from './feature-spec.js';
+export {
+  PlanCreateOperationSchema,
+  PlanModifyOperationSchema,
+  PlanDeleteOperationSchema,
+  PlanOperationSchema,
+  PlanTestFileSchema,
+  ImplementationPlanSchema,
+  type PlanCreateOperation,
+  type PlanModifyOperation,
+  type PlanDeleteOperation,
+  type PlanOperation,
+  type PlanTestFile,
+  type ImplementationPlan,
+} from './implementation-plan.js';
+export {
+  BugContextSchema,
+  BugErrorInfoSchema,
+  RecentCommitSchema,
+  ErrorReferenceSchema,
+  ErrorReferenceSourceSchema,
+  type BugContext,
+  type BugErrorInfo,
+  type RecentCommit,
+  type ErrorReference,
+  type ErrorReferenceSource,
+} from './bug-context.js';
+export {
+  HYPOTHESIS_ID_PATTERN,
+  HypothesisConfidenceSchema,
+  HypothesisSchema,
+  HypothesisListSchema,
+  type Hypothesis,
+  type HypothesisConfidence,
+  type HypothesisList,
+} from './bug-fix-hypothesis.js';
+export {
+  RootCauseEvidenceItemSchema,
+  RootCauseAnalysisSchema,
+  type RootCauseEvidenceItem,
+  type RootCauseAnalysis,
+} from './bug-fix-root-cause.js';
+export {
+  FIX_OPTION_ID_PATTERN,
+  FixOptionSchema,
+  FixProposalSchema,
+  FixRiskSchema,
+  FixScopeSchema,
+  type FixOption,
+  type FixProposal,
+  type FixRisk,
+  type FixScope,
+} from './bug-fix-proposal.js';
+export {
+  RegressionTestSchema,
+  TestFrameworkSchema,
+  type RegressionTest,
+  type TestFramework,
+} from './bug-fix-regression-test.js';
+export {
+  AiConfigSchema,
+  GitHubIntegrationConfigSchema,
+  IntegrationsConfigSchema,
+  ReviewModeSchema,
+  type AiConfig,
+  type GitHubIntegrationConfig,
+  type IntegrationsConfig,
+  type ReviewMode,
+} from './ai-config.js';
+export {
+  ReviewFindingSchema,
+  ReviewRecommendationSchema,
+  ReviewResultSchema,
+  ReviewSectionSchema,
+  ReviewSeveritySchema,
+  type ReviewFinding,
+  type ReviewRecommendation,
+  type ReviewResult,
+  type ReviewSection,
+  type ReviewSeverity,
+} from './review-result.js';

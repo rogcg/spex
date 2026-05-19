@@ -1,0 +1,42 @@
+{
+  "name": "@spex/cli",
+  "version": "0.4.0",
+  "private": true,
+  "description": "spex CLI — Spec-driven Programming EXecutor",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rogcg/spex.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/rogcg/spex#readme",
+  "bugs": {
+    "url": "https://github.com/rogcg/spex/issues"
+  },
+  "type": "module",
+  "bin": {
+    "spex": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.2.0",
+    "@spex/core": "workspace:*",
+    "@spex/integrations-github": "workspace:^",
+    "@spex/mcp-server": "workspace:^",
+    "@spex/schemas": "workspace:*",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "execa": "^9.5.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "yaml": "^2.6.1"
+  }
+}

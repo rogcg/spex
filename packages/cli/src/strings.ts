@@ -1,0 +1,308 @@
+export const STRINGS = {
+  banner: {
+    title: 'SPEX',
+    subtitle: 'Spec-driven Programming EXecutor',
+  },
+
+  newCommand: {
+    description: 'Create a new SPEX-managed project',
+    argDescription: 'project name (lowercase letters, numbers, dashes)',
+
+    aboutToCreate: (name: string) => `About to create a new project: ${name}`,
+    confirmProjectName: (name: string) => `Create project "${name}"?`,
+    cancelled: 'Cancelled. No changes were made.',
+
+    discoveryHeader: "\nLet's understand your project. A few quick questions:\n",
+
+    generatingSpec: '\nGenerating tech spec via Claude...',
+    specReady: '\n=== Generated tech-spec.yaml ===\n',
+    specReadyFooter: '=== end of tech-spec.yaml ===\n',
+    confirmApproveSpec: 'Approve this tech spec and proceed with scaffolding?',
+
+    scaffolding: (name: string) => `\nScaffolding ${name} with create-next-app...`,
+    injectingAi: 'Writing .ai/ folder...',
+    gitInit: 'Recording .ai/ folder in git...',
+
+    success: (name: string, dir: string) =>
+      `\nProject "${name}" created at:\n  ${dir}\n\nNext steps:\n  cd ${name}\n  pnpm dev\n`,
+  },
+
+  initCommand: {
+    description: 'Add SPEX `.ai/` infrastructure to an existing project',
+    forceFlagDescription: 'overwrite an existing .ai/ directory',
+
+    starting: (dir: string) => `Initialising SPEX in: ${dir}`,
+    aiFolderExists: (path: string) =>
+      `Error: ${path} already exists. Re-run with --force to overwrite, or remove the directory manually.`,
+
+    detecting: 'Detecting existing stack...',
+    detectionFailed: (message: string) => `Error: ${message}`,
+    detectionSummaryHeader: '\n=== Detected stack ===',
+    detectionSummaryFooter: '=== end of detection ===\n',
+    confirmDetection: 'Does this match the project? Continue with these detected values?',
+
+    discoveryHeader: '\nA few follow-up questions for context that cannot be detected:\n',
+
+    generatingSpec: '\nGenerating tech spec via Claude...',
+    specReady: '\n=== Generated tech-spec.yaml ===\n',
+    specReadyFooter: '=== end of tech-spec.yaml ===\n',
+    inferredNotice: (fields: readonly string[]) =>
+      `Note: the following fields were inferred from the existing project — review carefully:\n${fields
+        .map((f) => `  - ${f}`)
+        .join('\n')}\n`,
+    confirmApproveSpec: 'Approve this tech spec and write .ai/?',
+
+    writingAi: 'Writing .ai/ folder...',
+    cancelled: 'Cancelled. No changes were made.',
+    success: (dir: string) =>
+      `\n.ai/ initialised at:\n  ${dir}\n\nReview .ai/tech-spec.yaml and adjust inferred values as needed.\n`,
+  },
+
+  implementCommand: {
+    description: 'Implement a feature in the current project',
+    argDescription: 'one-line description of the feature to implement',
+    autoFlagDescription: 'skip approval gates (dangerous — applies everything without prompting)',
+    dryRunFlagDescription: 'show what would happen without writing any files or running git',
+    noGitFlagDescription: 'skip branch creation and commits',
+    fromIssueFlagDescription: 'source description from a GitHub issue id (not yet supported)',
+
+    missingDescription:
+      'Error: provide a feature description.\n  Example: spex implement "add pagination to the user list"',
+    fromIssueNotSupported: 'Error: --from-issue is not supported yet.',
+    notAGitRepo:
+      'Error: not inside a git repository. Run `git init` first or pass --no-git to skip git operations.',
+    dirtyWorkingTree: (entries: readonly string[]) =>
+      `Error: working tree has uncommitted changes. Commit or stash them before running spex implement, or pass --no-git.\n${entries
+        .map((line) => `  ${line}`)
+        .join('\n')}`,
+    branchExists: (branch: string) =>
+      `Error: branch "${branch}" already exists. Delete it or rename the feature before retrying.`,
+
+    autoModeWarning:
+      'Warning: running in --auto mode — approval gates are skipped. Source changes, tests, and commits will be applied automatically.',
+
+    aboutToImplement: (description: string) => `\nFeature request:\n  ${description}\n`,
+
+    phase1Header: '\n[1/5] Reading codebase context...',
+    contextSummary: (opts: {
+      files: number;
+      truncated: boolean;
+      excluded: number;
+      framework: string;
+      patterns: string;
+    }) =>
+      `  - files indexed: ${opts.files}${opts.truncated ? ` (truncated, ${opts.excluded} dropped)` : ''}\n  - stack: ${opts.framework}\n  - patterns: ${opts.patterns}`,
+
+    phase2Header: '\n[2/5] Generating feature spec via Claude...',
+    featureSpecPreviewStart: '\n=== Proposed feature spec ===\n',
+    featureSpecPreviewEnd: '=== end of feature spec ===\n',
+    confirmApproveFeatureSpec: 'Approve this feature spec?',
+
+    phase3Header: '\n[3/5] Generating implementation plan via Claude...',
+    planPreviewStart: '\n=== Proposed implementation plan ===\n',
+    planPreviewEnd: '=== end of plan ===\n',
+    confirmApprovePlan: 'Approve this implementation plan?',
+
+    phase4Header: (mode: string) => `\n[4/5] Executing plan (mode: ${mode})...`,
+    creatingBranch: (branch: string) => `  Creating branch: ${branch}`,
+    writingFeatureSpec: (relPath: string) => `  Writing ${relPath}`,
+    opAboutToApply: (order: number, kind: string, path: string) =>
+      `  → operation #${order} (${kind}): ${path}`,
+    confirmApplyOperation: 'Apply this operation?',
+    operationSkipped: '  ⤵ skipped',
+    operationApplied: '  ✓ applied',
+
+    dryRunDone: (count: number) =>
+      `\nDry run complete. ${count} operation(s) would be applied. No files were written.`,
+    executionDone: (opts: { applied: number; skipped: number }) =>
+      `  ${opts.applied} operation(s) applied${opts.skipped > 0 ? `, ${opts.skipped} skipped` : ''}.`,
+
+    phase5Header: '\n[5/5] Committing changes...',
+    committingChanges: (sha: string) => `  feat commit: ${sha.slice(0, 10)}`,
+    committingTests: (sha: string) => `  test commit: ${sha.slice(0, 10)}`,
+    noChangesToCommit: '  (no changes were applied — nothing to commit)',
+    gitDisabled: '\nGit operations skipped (--no-git or --dry-run).',
+
+    success: (opts: { branch: string | null; auditLog: string | null }) =>
+      `\nDone.${opts.branch ? `\n  Branch: ${opts.branch}` : ''}${opts.auditLog ? `\n  Audit log: ${opts.auditLog}` : ''}\n`,
+
+    cancelled: 'Cancelled. No changes were applied.',
+  },
+
+  fixCommand: {
+    description: 'Diagnose a bug and propose + verify a fix',
+    argDescription: 'one-line description of the bug',
+    affectedFlagDescription: 'project-relative file path the bug appears in (repeatable)',
+    errorMessageFlagDescription: 'optional error message text',
+    errorStackFlagDescription: 'optional stack trace text',
+    autoFlagDescription:
+      'skip approval gates (dangerous — applies the recommended fix without prompting)',
+    dryRunFlagDescription: 'show the analysis + proposed fix without writing or running git',
+    noGitFlagDescription: 'skip branch creation and commit',
+    fromErrorFlagDescription:
+      'placeholder for structured error sources (PostHog/Sentry) — not yet supported',
+
+    missingDescription:
+      'Error: provide a bug description.\n  Example: spex fix "pagination resets when I change a filter"',
+    fromErrorNotSupported: 'Error: --from-error is not supported yet.',
+    notAGitRepo:
+      'Error: not inside a git repository. Run `git init` or pass --no-git to skip git operations.',
+    dirtyWorkingTree: (entries: readonly string[]) =>
+      `Error: working tree has uncommitted changes. Commit or stash them, or pass --no-git.\n${entries
+        .map((line) => `  ${line}`)
+        .join('\n')}`,
+
+    autoModeWarning:
+      'Warning: running in --auto mode — approval gates are skipped. The top-ranked hypothesis, recommended fix option, and generated regression test will all be applied automatically.',
+
+    aboutToDebug: (description: string) => `\nBug:\n  ${description}\n`,
+
+    phase1Header: '\n[1/6] Reading codebase + bug context...',
+    contextSummary: (opts: {
+      files: number;
+      affected: number;
+      commits: number;
+      framework: string;
+    }) =>
+      `  - files indexed: ${opts.files}\n  - bug-context affected files: ${opts.affected}\n  - recent commits collected: ${opts.commits}\n  - test framework: ${opts.framework}`,
+
+    phase2Header: '\n[2/6] Generating ranked hypotheses via Claude...',
+    hypothesesPreviewStart: '\n=== Hypotheses ===\n',
+    hypothesesPreviewEnd: '=== end of hypotheses ===\n',
+    pickHypothesisPrompt: 'Pick a hypothesis to investigate first',
+
+    phase3Header: (hypothesisId: string) =>
+      `\n[3/6] Analysing root cause for ${hypothesisId} via Claude...`,
+    rootCauseConfirmed: '  Root cause confirmed.',
+    rootCauseRefuted: (next: string) => `  Refuted. Trying next: ${next}`,
+    rootCausePreviewStart: '\n=== Root cause ===\n',
+    rootCausePreviewEnd: '=== end of root cause ===\n',
+    confirmApproveRootCause: 'Approve this root cause and proceed to fix proposal?',
+
+    phase4Header: '\n[4/6] Generating fix proposal via Claude...',
+    proposalPreviewStart: '\n=== Fix proposal ===\n',
+    proposalPreviewEnd: '=== end of fix proposal ===\n',
+    pickFixOptionPrompt: 'Pick a fix option to apply',
+
+    phase5Header: '\n[5/6] Generating regression test via Claude...',
+    regressionTestPreviewStart: '\n=== Regression test ===\n',
+    regressionTestPreviewEnd: '=== end of regression test ===\n',
+    confirmApproveRegressionTest: 'Approve this regression test?',
+
+    phase6Header: '\n[6/6] Verifying fail-then-pass cycle...',
+    creatingBranch: (branch: string) => `  Creating branch: ${branch}`,
+    verifying: '  Running test before applying the fix...',
+    verifierBefore: (exit: number | null) => `    before-fix exit code: ${exit}`,
+    verifierApplyingFix: '  Applying the fix...',
+    verifierAfter: (exit: number | null) => `    after-fix exit code: ${exit}`,
+    committing: (sha: string) => `  fix commit: ${sha.slice(0, 10)}`,
+
+    dryRunDone: '\nDry run complete. No files were modified.',
+    success: (opts: { branch: string | null; commit: string | null }) =>
+      `\nDone.${opts.branch ? `\n  Branch: ${opts.branch}` : ''}${
+        opts.commit ? `\n  Commit: ${opts.commit.slice(0, 10)}` : ''
+      }\n`,
+    cancelled: 'Cancelled. No changes were applied.',
+  },
+
+  mcpServerCommand: {
+    description: 'Start SPEX as an MCP server (consumable by Claude Code, Cursor, etc.)',
+    transportFlagDescription: 'Transport to use (stdio is the only supported option)',
+    portFlagDescription: 'TCP port for the HTTP transport (placeholder — not yet supported)',
+
+    httpNotSupported:
+      'Error: HTTP transport is not supported yet. Use --transport=stdio (default).',
+    unsupportedTransport: (value: string) =>
+      `Error: unsupported transport "${value}". Only "stdio" is supported.`,
+
+    startupMessage: 'SPEX MCP server listening on stdio',
+    shutdownMessage: (signal: string) => `Shutting down (${signal})`,
+  },
+
+  githubSetupCommand: {
+    description: 'Install SPEX GitHub Actions workflow templates into this project',
+    setupDescription: 'Install workflow templates into .github/workflows/',
+    forceFlagDescription: 'overwrite existing workflow files at .github/workflows/<name>.yml',
+
+    starting: (dir: string) => `\nInstalling SPEX workflow templates into:\n  ${dir}`,
+    wrote: (relPath: string) => `  ✓ wrote ${relPath}`,
+    skipped: (relPath: string) =>
+      `  ⤵ skipped ${relPath} (already exists — re-run with --force to overwrite)`,
+    summary: (opts: { written: number; skipped: number; forceUsed: boolean }) => {
+      const parts = [`\nDone. ${opts.written} written, ${opts.skipped} skipped.`];
+      if (opts.skipped > 0 && !opts.forceUsed) {
+        parts.push('Add --force to overwrite skipped files.');
+      }
+      parts.push('');
+      parts.push('Required repo secrets:');
+      parts.push('  - ANTHROPIC_API_KEY  (used by SPEX to call Claude)');
+      parts.push('  - GITHUB_TOKEN       (provided automatically by GitHub Actions)');
+      parts.push('');
+      return parts.join('\n');
+    },
+  },
+
+  reviewCommand: {
+    description: 'Review a GitHub PR against its linked spec and project conventions',
+    argDescription: 'PR number (e.g. 42) or full PR URL',
+    autoFlagDescription: 'skip the confirm-before-post prompt and post immediately',
+    dryRunFlagDescription: 'generate the review and print the comment without posting to GitHub',
+
+    missingRef:
+      'Error: provide a PR number or URL.\n  Examples:\n    spex review 42\n    spex review https://github.com/owner/repo/pull/42',
+    missingOwnerRepo:
+      'Error: owner/repo could not be determined. Use a full PR URL, or add `integrations.github.{owner, repo}` to .ai/config.yaml.',
+    missingToken:
+      'Error: GITHUB_TOKEN is not set. Set it in your environment or .env file before running spex review.',
+
+    fetchingPr: (n: number, owner: string, repo: string) =>
+      `\nFetching PR #${n} from ${owner}/${repo}...`,
+    fetchingDiff: '  Fetching unified diff...',
+    emptyDiff: '  PR diff is empty — nothing to review.',
+    foundFeatureSpec: (path: string) => `  Linked feature spec: ${path}`,
+    featureSpecMissing: (path: string) =>
+      `  Branch suggests ${path} but the file was not found — reviewing against tech spec + diff only.`,
+    foundTechSpec: '  Linked tech spec: .ai/tech-spec.yaml',
+    buildingContext: '  Reading codebase context...',
+    generating: (mode: string) => `  Generating review via Claude (mode: ${mode})...`,
+    previewStart: '\n=== Proposed review comment ===\n',
+    previewEnd: '\n=== end of review comment ===\n',
+    confirmPost: (n: number) => `Post this review to PR #${n}?`,
+    cancelled: 'Cancelled. No comment was posted.',
+    posted: (url: string) => `\n✓ Posted: ${url}\n`,
+    dryRunDone: '\nDry run complete. No comment was posted.',
+    usingHost: (host: string) => `  (host: ${host})`,
+  },
+
+  githubPr: {
+    integrationNotConfigured:
+      '\nGitHub integration not configured. Add .ai/config.yaml with `integrations.github.{owner, repo, auto_create_pr: true}` to open PRs automatically.',
+    autoCreatePrDisabled:
+      '\nGitHub integration found but `auto_create_pr` is false — skipping PR creation.',
+    missingToken:
+      '\nGITHUB_TOKEN is not set — skipping PR creation. Set GITHUB_TOKEN in your environment or .env file to enable PR creation.',
+    noCommitsToPush: '\nNo commits were created on this branch — skipping PR creation.',
+    invalidConfig: (issues: readonly string[]) =>
+      `\nError: .ai/config.yaml is invalid:\n${issues.map((i) => `  - ${i}`).join('\n')}\nSkipping PR creation.`,
+    polishingDescription: '  Polishing PR description via Claude...',
+    pushing: (branch: string, owner: string, repo: string) =>
+      `  Pushing ${branch} to ${owner}/${repo}...`,
+    creating: (base: string) => `  Opening PR against ${base}...`,
+    created: (opts: { url: string; number: number; labels: readonly string[] }) =>
+      `  ✓ PR #${opts.number}: ${opts.url}${opts.labels.length > 0 ? `\n    labels: ${opts.labels.join(', ')}` : ''}`,
+    pushFailed: (message: string) =>
+      `\nError: failed to push branch. ${message}\nPR was NOT opened. Your local commits are intact.`,
+    createFailed: (message: string) =>
+      `\nError: branch was pushed but creating the PR failed. ${message}\nOpen the PR manually from the GitHub UI.`,
+  },
+
+  errors: {
+    missingApiKey: (envVar: string) =>
+      `Error: ${envVar} is not set. Set it in your environment or a .env file before running spex new.`,
+    projectExists: (name: string) =>
+      `Error: a directory named "${name}" already exists in this location.`,
+    invalidProjectName: (name: string) =>
+      `Error: invalid project name "${name}". Use lowercase letters, numbers, and dashes only (e.g. "my-saas").`,
+    generic: (message: string) => `Error: ${message}`,
+  },
+} as const;

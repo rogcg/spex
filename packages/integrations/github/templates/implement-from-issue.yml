@@ -1,0 +1,58 @@
+# SPEX auto-implement workflow.
+#
+# When an issue is labelled `spex:implement`, SPEX implements it on a new
+# branch and opens a PR.
+#
+# Requirements:
+#   - Repo label `spex:implement` (create it once in the GitHub UI).
+#   - Repo secret ANTHROPIC_API_KEY — used by SPEX to call Claude.
+#   - Default GITHUB_TOKEN — already provided by GitHub Actions; the workflow
+#     uses it to push the branch and open the PR.
+#   - `.ai/config.yaml` with `integrations.github.{owner, repo, auto_create_pr: true}`
+#     for the PR to actually open (otherwise SPEX commits locally and stops).
+#   - SPEX must be published to npm.
+#
+# Limitations:
+#   - This workflow uses the issue TITLE as the feature description. Full
+#     title+body parsing arrives with `spex implement --from-issue`.
+#   - `--auto` skips the per-step approval gates. Review the resulting PR
+#     before merging.
+
+name: SPEX Implement from Issue
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  implement:
+    if: github.event.label.name == 'spex:implement'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configure git identity
+        run: |
+          git config user.name "spex-bot"
+          git config user.email "spex-bot@users.noreply.github.com"
+
+      - name: Install SPEX
+        run: npm install -g spex
+
+      - name: Run implement
+        run: spex implement "${{ github.event.issue.title }}" --auto
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
