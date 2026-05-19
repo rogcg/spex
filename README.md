@@ -1,5 +1,7 @@
 # SPEX
 
+[![CI](https://github.com/rogcg/spex/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rogcg/spex/actions/workflows/ci.yml)
+
 **Spec-driven Programming EXecutor**
 
 > AI agent orchestration framework for software development, based on versioned specs and human approval gates.
