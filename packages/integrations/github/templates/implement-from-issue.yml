@@ -15,6 +15,10 @@
 #     uses it to push the branch and open the PR.
 #   - `.ai/config.yaml` with `integrations.github.{owner, repo, auto_create_pr: true}`
 #     for the PR to actually open (otherwise SPEX commits locally and stops).
+#   - Settings → Actions → General → "Allow GitHub Actions to create and
+#     approve pull requests" must be ENABLED. Without it, the branch is
+#     pushed but PR creation fails with "GitHub Actions is not permitted to
+#     create or approve pull requests."
 #
 # Customise:
 #   - `SPEX_REF` env at the top pins which SPEX version this workflow uses.
