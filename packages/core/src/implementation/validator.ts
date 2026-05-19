@@ -40,6 +40,29 @@ export function validatePlanIntegrity(
     pairs.add(key);
   }
 
+  // No duplicate paths within tests_to_add.
+  const testPaths = new Set<string>();
+  for (const test of plan.tests_to_add) {
+    if (testPaths.has(test.path)) {
+      violations.push(`duplicate test file in tests_to_add: ${test.path}`);
+    }
+    testPaths.add(test.path);
+  }
+
+  // Tests must not collide with source-op paths. The executor creates test
+  // files via plan.tests_to_add after plan.operations, so a path that's
+  // already written by a source op would fail with "file already exists".
+  // This catches the LLM hallucination of listing the same file twice
+  // (e.g. once in operations with create, once in tests_to_add).
+  const sourcePaths = new Set(plan.operations.map((op) => op.path));
+  for (const test of plan.tests_to_add) {
+    if (sourcePaths.has(test.path)) {
+      violations.push(
+        `path collision: ${test.path} appears in both plan.operations and plan.tests_to_add`,
+      );
+    }
+  }
+
   // Optional cross-check against an approved feature spec.
   if (options.featureSpec) {
     if (plan.feature_slug !== options.featureSpec.feature.slug) {

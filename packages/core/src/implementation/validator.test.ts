@@ -116,6 +116,32 @@ describe('validatePlanIntegrity', () => {
     expect(() => validatePlanIntegrity(plan)).toThrow(InvalidPlanError);
   });
 
+  it('throws InvalidPlanError when tests_to_add has duplicate paths', () => {
+    const plan = makePlan({
+      tests_to_add: [
+        { path: 'src/greet.test.ts', content: 'test 1' },
+        { path: 'src/greet.test.ts', content: 'test 2' },
+      ],
+    });
+    expect(() => validatePlanIntegrity(plan)).toThrow(InvalidPlanError);
+  });
+
+  it('throws InvalidPlanError when a test path also appears in plan.operations', () => {
+    const plan = makePlan({
+      operations: [
+        {
+          order: 1,
+          path: 'src/greet.test.ts',
+          operation: 'create',
+          rationale: 'Source op accidentally targets a test file path.',
+          full_content: '// content',
+        },
+      ],
+      tests_to_add: [{ path: 'src/greet.test.ts', content: 'test content' }],
+    });
+    expect(() => validatePlanIntegrity(plan)).toThrow(InvalidPlanError);
+  });
+
   it('throws InvalidPlanError when feature_slug does not match featureSpec.slug', () => {
     const plan = makePlan({ feature_slug: 'other-feature' });
     expect(() => validatePlanIntegrity(plan, { featureSpec })).toThrow(InvalidPlanError);
