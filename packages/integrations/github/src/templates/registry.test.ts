@@ -54,6 +54,10 @@ describe('getWorkflowTemplate', () => {
     expect(tpl.content).toContain('pnpm install --frozen-lockfile');
     expect(tpl.content).toContain('pnpm -r build');
     expect(tpl.content).toContain('packages/cli/dist/index.js');
+    // implement-from-issue runs `spex implement` which checks for a clean
+    // working tree; .spex-source/ must be excluded so the check passes.
+    expect(tpl.content).toContain('.spex-source/');
+    expect(tpl.content).toContain('.git/info/exclude');
   });
 
   it('throws UnknownWorkflowTemplateError for an unknown name', async () => {

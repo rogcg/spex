@@ -75,6 +75,13 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm -r build
 
+      - name: Hide SPEX source from target repo git status
+        # spex implement runs `git status --porcelain` to confirm a clean
+        # working tree. The .spex-source/ checkout above is untracked in the
+        # target repo and would trip that check. Add it to .git/info/exclude
+        # so git status ignores it without modifying the user's .gitignore.
+        run: echo ".spex-source/" >> .git/info/exclude
+
       - name: Configure git identity
         run: |
           git config user.name "spex-bot"
