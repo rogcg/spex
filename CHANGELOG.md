@@ -9,6 +9,41 @@ While SPEX is on `0.x`, any minor release may contain breaking changes to CLI
 flags, `.ai/` artifact formats, MCP tool shapes, or schema definitions. Pin to
 a specific version (or commit SHA, until npm publish) if you need stability.
 
+## [0.5.1] — 2026-05-19
+
+### Fixed
+
+- **`spex github setup` workflow templates / `implement-from-issue.yml`:**
+  the SPEX source checkout into `.spex-source/` inside the target repo
+  tripped SPEX's "clean working tree" pre-flight when running `spex
+  implement`. The workflow now appends `.spex-source/` to
+  `.git/info/exclude` after checkout, so `git status --porcelain` skips
+  it without modifying the user's `.gitignore`.
+- **Implementation plan validator** (`validatePlanIntegrity`) now detects
+  two failure modes the LLM occasionally produces:
+  - duplicate paths within `tests_to_add`
+  - the same path appearing in both `plan.operations` and
+    `plan.tests_to_add` — the executor writes source ops first, then
+    tests, so this previously crashed mid-execution with "file already
+    exists" after partial writes. Validator now rejects the plan up
+    front with a clear message.
+
+### Documented
+
+- **`implement-from-issue.yml`** header now lists the repo-level setting
+  "Allow GitHub Actions to create and approve pull requests" as a
+  requirement. Without it the branch is pushed but PR creation fails
+  with "GitHub Actions is not permitted to create or approve pull
+  requests." Local commits are intact in that case; the PR can be
+  opened manually.
+
+### Verified
+
+- Caught and fixed during a second-pass E2E validation of the workflow
+  templates against a sandbox repo. `implement-from-issue.yml` now runs
+  green end-to-end (59s cold start) and opens a PR with feat + test
+  commits.
+
 ## [0.5.0] — 2026-05-19
 
 ### Added — GitHub integration
@@ -143,6 +178,7 @@ a specific version (or commit SHA, until npm publish) if you need stability.
 - CI workflow (`.github/workflows/ci.yml`) running install, lint,
   typecheck, test on push + PR.
 
+[0.5.1]: https://github.com/rogcg/spex/releases/tag/v0.5.1
 [0.5.0]: https://github.com/rogcg/spex/releases/tag/v0.5.0
 [0.4.0]: https://github.com/rogcg/spex/releases/tag/v0.4.0
 [0.3.0]: https://github.com/rogcg/spex/releases/tag/v0.3.0
