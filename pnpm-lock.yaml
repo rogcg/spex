@@ -26,6 +26,9 @@ importers:
       '@spex/integrations-github':
         specifier: workspace:^
         version: link:../integrations/github
+      '@spex/integrations-linear':
+        specifier: workspace:^
+        version: link:../integrations/linear
       '@spex/mcp-server':
         specifier: workspace:^
         version: link:../mcp-server

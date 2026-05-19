@@ -64,11 +64,24 @@ export const STRINGS = {
     autoFlagDescription: 'skip approval gates (dangerous — applies everything without prompting)',
     dryRunFlagDescription: 'show what would happen without writing any files or running git',
     noGitFlagDescription: 'skip branch creation and commits',
-    fromIssueFlagDescription: 'source description from a GitHub issue id (not yet supported)',
+    fromIssueFlagDescription:
+      'source description from a Linear issue id (e.g. SPX-47). Reads title+description from Linear; requires LINEAR_API_KEY.',
 
     missingDescription:
       'Error: provide a feature description.\n  Example: spex implement "add pagination to the user list"',
-    fromIssueNotSupported: 'Error: --from-issue is not supported yet.',
+    fromIssueAndDescriptionConflict:
+      'Error: pass either a description argument OR --from-issue, not both.',
+    fromIssueInvalidFormat: (raw: string) =>
+      `Error: --from-issue value "${raw}" is not a Linear issue identifier. Expected something like "SPX-47".`,
+    fromIssueMissingApiKey:
+      'Error: --from-issue requires LINEAR_API_KEY. Generate a key at https://linear.app/settings/api and export LINEAR_API_KEY before retrying.',
+    fromIssueFetching: (id: string) => `\n[0/5] Fetching Linear issue ${id}...`,
+    fromIssueFetched: (opts: { identifier: string; title: string; url: string }) =>
+      `  - ${opts.identifier}: ${opts.title}\n  - ${opts.url}`,
+    fromIssueFetchFailed: (id: string, reason: string) =>
+      `Error: failed to fetch Linear issue ${id}: ${reason}`,
+    fromIssueEmptyBody: (id: string) =>
+      `Error: Linear issue ${id} has neither a title nor a description; cannot derive a feature description.`,
     notAGitRepo:
       'Error: not inside a git repository. Run `git init` first or pass --no-git to skip git operations.',
     dirtyWorkingTree: (entries: readonly string[]) =>

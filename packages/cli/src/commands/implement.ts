@@ -23,6 +23,7 @@ import {
   validatePlanIntegrity,
   writeFeatureSpec,
 } from '@spex/core';
+import { type LinearIssue, createLinearMcpClient, getLinearIssue } from '@spex/integrations-linear';
 import { STRINGS } from '../strings.js';
 import { runGithubPrStep } from './github-pr.js';
 import { collectCommitGroups, formatPlanForReview } from './implement-helpers.js';
@@ -34,19 +35,104 @@ export interface ImplementCommandOptions {
   fromIssue?: string;
 }
 
+const LINEAR_ID_PATTERN = /^[A-Z][A-Z0-9_]*-\d+$/;
+
+export function isLinearIssueIdentifier(raw: string): boolean {
+  return LINEAR_ID_PATTERN.test(raw);
+}
+
+export interface LinearIssueDescriptionSource {
+  identifier: string;
+  url: string;
+  title: string;
+  description: string;
+}
+
+/**
+ * Merge a Linear issue's title and description into a single feature
+ * description suitable for spec generation. Empty title or description are
+ * tolerated; both empty surfaces as `null` so the caller can error out
+ * cleanly.
+ */
+export function buildDescriptionFromLinearIssue(
+  issue: LinearIssue,
+): LinearIssueDescriptionSource | null {
+  const title = issue.title.trim();
+  const description = (issue.description ?? '').trim();
+  if (title.length === 0 && description.length === 0) {
+    return null;
+  }
+  let merged: string;
+  if (title.length === 0) merged = description;
+  else if (description.length === 0) merged = title;
+  else merged = `${title}\n\n${description}`;
+  return {
+    identifier: issue.identifier,
+    url: issue.url,
+    title,
+    description: merged,
+  };
+}
+
 export async function runImplementCommand(
   description: string | undefined,
   options: ImplementCommandOptions = {},
 ): Promise<void> {
-  if (options.fromIssue) {
-    console.error(STRINGS.implementCommand.fromIssueNotSupported);
+  const hasDescription = description !== undefined && description.trim().length > 0;
+  const fromIssue = options.fromIssue?.trim();
+
+  if (fromIssue && hasDescription) {
+    console.error(STRINGS.implementCommand.fromIssueAndDescriptionConflict);
     process.exitCode = 1;
     return;
   }
-  if (!description || description.trim().length === 0) {
+  if (!fromIssue && !hasDescription) {
     console.error(STRINGS.implementCommand.missingDescription);
     process.exitCode = 1;
     return;
+  }
+  if (fromIssue && !isLinearIssueIdentifier(fromIssue)) {
+    console.error(STRINGS.implementCommand.fromIssueInvalidFormat(fromIssue));
+    process.exitCode = 1;
+    return;
+  }
+  if (fromIssue && (process.env.LINEAR_API_KEY ?? '').length === 0) {
+    console.error(STRINGS.implementCommand.fromIssueMissingApiKey);
+    process.exitCode = 1;
+    return;
+  }
+
+  let linearSource: LinearIssueDescriptionSource | null = null;
+  let effectiveDescription = description ?? '';
+  if (fromIssue) {
+    console.log(STRINGS.implementCommand.fromIssueFetching(fromIssue));
+    try {
+      const linear = await createLinearMcpClient();
+      try {
+        const issue = await getLinearIssue({ client: linear, id: fromIssue });
+        linearSource = buildDescriptionFromLinearIssue(issue);
+        if (linearSource === null) {
+          console.error(STRINGS.implementCommand.fromIssueEmptyBody(fromIssue));
+          process.exitCode = 1;
+          return;
+        }
+        effectiveDescription = linearSource.description;
+        console.log(
+          STRINGS.implementCommand.fromIssueFetched({
+            identifier: linearSource.identifier,
+            title: linearSource.title,
+            url: linearSource.url,
+          }),
+        );
+      } finally {
+        await linear.close();
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      console.error(STRINGS.implementCommand.fromIssueFetchFailed(fromIssue, reason));
+      process.exitCode = 1;
+      return;
+    }
   }
 
   const projectDir = resolve(process.cwd());
@@ -86,7 +172,7 @@ export async function runImplementCommand(
     }
   }
 
-  console.log(STRINGS.implementCommand.aboutToImplement(description));
+  console.log(STRINGS.implementCommand.aboutToImplement(effectiveDescription));
   if (auto) {
     console.log(STRINGS.implementCommand.autoModeWarning);
   }
@@ -98,7 +184,11 @@ export async function runImplementCommand(
 
   // Phase 2: feature spec
   console.log(STRINGS.implementCommand.phase2Header);
-  const featureSpec = await generateFeatureSpec({ llm, description, context });
+  const featureSpec = await generateFeatureSpec({
+    llm,
+    description: effectiveDescription,
+    context,
+  });
   console.log(STRINGS.implementCommand.featureSpecPreviewStart);
   console.log(featureSpecToYaml(featureSpec));
   console.log(STRINGS.implementCommand.featureSpecPreviewEnd);
@@ -259,6 +349,9 @@ export async function runImplementCommand(
           operation: f.operation,
         })),
         featureSpecRelativePath,
+        ...(linearSource !== null
+          ? { linearIssue: { identifier: linearSource.identifier, url: linearSource.url } }
+          : {}),
       },
     });
   }

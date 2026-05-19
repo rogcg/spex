@@ -16,6 +16,8 @@ export interface FeaturePrInput {
   branch: string;
   baseBranch: string;
   commits: readonly PrCommitInfo[];
+  /** Optional Linear issue this PR resolves. Renders as a `Closes` reference. */
+  linearIssue?: { identifier: string; url: string };
 }
 
 export interface FixPrInput {
@@ -53,6 +55,12 @@ export function buildFeaturePrTemplate(input: FeaturePrInput): PrDescription {
   const sections: string[] = [];
 
   sections.push(`## Summary\n\n${input.featureDescription.trim()}`);
+
+  if (input.linearIssue) {
+    sections.push(
+      `## Linear\n\nCloses [${input.linearIssue.identifier}](${input.linearIssue.url})`,
+    );
+  }
 
   sections.push(`## Technical approach\n\n${input.technicalApproach.trim()}`);
 
