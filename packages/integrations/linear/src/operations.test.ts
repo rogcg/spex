@@ -24,24 +24,30 @@ function makeClient(callTool: ReturnType<typeof vi.fn>): LinearMcpClient {
   };
 }
 
+// Matches the actual JSON returned by https://mcp.linear.app/mcp — `id` is
+// the human identifier, `status`/`team` are flat strings, `priority` arrives
+// as `{value, name}`, etc.
 const sampleIssue = {
-  id: 'iss_uuid_1',
-  identifier: 'SPX-47',
+  id: 'SPX-47',
   title: 'Linear MCP Client',
   description: 'Sprint 6 Step 1',
   url: 'https://linear.app/spex/issue/SPX-47',
-  status: { id: 'st_progress', name: 'In Progress', type: 'started' },
-  team: { id: 'team_uuid_spx', key: 'SPX', name: 'SPEX' },
-  assignee: {
-    id: 'user_uuid_1',
-    name: 'rogcg',
-    displayName: 'rogcg',
-    email: 'rogcg@example.com',
-  },
-  labels: [{ id: 'lbl_1', name: 'sprint-6', color: '#ff0000' }],
-  priority: 3,
+  status: 'In Progress',
+  statusType: 'started',
+  team: 'SPEX',
+  teamId: 'fcc025cd-897e-46cd-9e23-fdc2aff14578',
+  project: 'SPEX Framework',
+  projectId: 'project-uuid',
+  priority: { value: 3, name: 'Medium' },
+  labels: ['sprint-6'],
+  gitBranchName: 'admin/spx-47-linear-mcp-client',
   createdAt: '2026-05-17T19:53:13.169Z',
   updatedAt: '2026-05-19T04:13:31.285Z',
+  startedAt: '2026-05-19T04:13:31.285Z',
+  completedAt: null,
+  canceledAt: null,
+  archivedAt: null,
+  dueDate: null,
 };
 
 const sampleComment = {
@@ -49,12 +55,8 @@ const sampleComment = {
   body: 'Looks good to me',
   url: 'https://linear.app/spex/issue/SPX-47#comment-1',
   createdAt: '2026-05-19T05:00:00.000Z',
-  user: {
-    id: 'user_uuid_1',
-    name: 'rogcg',
-    displayName: 'rogcg',
-    email: 'rogcg@example.com',
-  },
+  user: 'rogcg',
+  userId: 'user-uuid',
 };
 
 describe('getLinearIssue', () => {
@@ -71,8 +73,10 @@ describe('getLinearIssue', () => {
       arguments: { id: 'SPX-47' },
     });
     expect(issue.identifier).toBe('SPX-47');
-    expect(issue.status.type).toBe('started');
-    expect(issue.assignee?.name).toBe('rogcg');
+    expect(issue.statusType).toBe('started');
+    expect(issue.team).toBe('SPEX');
+    expect(issue.priority).toBe(3);
+    expect(issue.labels).toEqual(['sprint-6']);
   });
 
   it('falls back to parsing JSON out of text content when structuredContent is absent', async () => {
@@ -194,7 +198,7 @@ describe('addLinearComment', () => {
       arguments: { issueId: 'SPX-47', body: 'Looks good to me' },
     });
     expect(comment.body).toBe('Looks good to me');
-    expect(comment.user?.name).toBe('rogcg');
+    expect(comment.user).toBe('rogcg');
   });
 });
 

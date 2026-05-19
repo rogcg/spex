@@ -3,25 +3,24 @@ import { z } from 'zod';
 import type {
   LinearComment,
   LinearIssue,
-  LinearLabel,
   LinearMcpClient,
-  LinearTeam,
-  LinearUser,
   LinearWorkflowStateType,
 } from './types.js';
 
 // -----------------------------------------------------------------------------
 // MCP tool names
 // -----------------------------------------------------------------------------
-// The official Linear MCP server advertises these tool names. They live here
-// rather than at each call site so an upstream rename only touches one spot.
+// Verified against https://mcp.linear.app/mcp via tools/list. The server uses
+// a single `save_issue` / `save_comment` endpoint for both create and update
+// (presence of `id` toggles the mode), so `createIssue` and `updateIssue`
+// alias the same tool.
 
 export const LINEAR_TOOLS = {
   getIssue: 'get_issue',
   listIssues: 'list_issues',
-  createIssue: 'create_issue',
-  updateIssue: 'update_issue',
-  createComment: 'create_comment',
+  createIssue: 'save_issue',
+  updateIssue: 'save_issue',
+  createComment: 'save_comment',
 } as const;
 
 // -----------------------------------------------------------------------------
@@ -40,30 +39,10 @@ export class LinearToolError extends SpexError {
 // Zod schemas (parse structuredContent from MCP responses)
 // -----------------------------------------------------------------------------
 
-// Schemas use `.nullable()` (not `.default(null)`) so the parsed output type
-// stays `T | null` rather than `T | null | undefined` — required for the
-// repo's `exactOptionalPropertyTypes: true` setting. Each operation
-// explicitly returns the domain type, so a schema/type drift surfaces at
-// compile time.
-
-const userSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  displayName: z.string(),
-  email: z.string().email().nullable(),
-}) satisfies z.ZodType<LinearUser>;
-
-const labelSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  color: z.string().nullable(),
-}) satisfies z.ZodType<LinearLabel>;
-
-const teamSchema = z.object({
-  id: z.string(),
-  key: z.string(),
-  name: z.string(),
-}) satisfies z.ZodType<LinearTeam>;
+// Schemas mirror what Linear's MCP server actually returns. The server is
+// lenient about which fields it includes, so we use `.passthrough()` and
+// preprocess scalar/object unions (e.g. `priority` arrives as either a number
+// or `{value, name}`) into the simple primitives our domain types expose.
 
 const workflowStateTypeSchema = z.enum([
   'triage',
@@ -74,38 +53,106 @@ const workflowStateTypeSchema = z.enum([
   'canceled',
 ]) satisfies z.ZodType<LinearWorkflowStateType>;
 
-const issueStatusSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  type: workflowStateTypeSchema,
-});
+const labelArraySchema = z
+  .array(z.union([z.string(), z.object({ name: z.string() }).passthrough()]))
+  .transform((items) => items.map((item) => (typeof item === 'string' ? item : item.name)))
+  .default([]);
 
-const issueSchema = z.object({
-  id: z.string(),
-  identifier: z.string(),
-  title: z.string(),
-  description: z.string().nullable(),
-  url: z.string().url(),
-  status: issueStatusSchema,
-  team: teamSchema,
-  assignee: userSchema.nullable(),
-  labels: z.array(labelSchema),
-  priority: z.number().int(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-}) satisfies z.ZodType<LinearIssue>;
+const priorityFieldSchema = z
+  .union([z.number(), z.object({ value: z.number() }).passthrough(), z.null()])
+  .transform((value) => {
+    if (value === null) return null;
+    if (typeof value === 'number') return value;
+    return value.value;
+  })
+  .nullable();
 
-const commentSchema = z.object({
-  id: z.string(),
-  body: z.string(),
-  url: z.string().url(),
-  createdAt: z.string(),
-  user: userSchema.nullable(),
-}) satisfies z.ZodType<LinearComment>;
+const issueSchema = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string().nullable().default(null),
+    url: z.string().url(),
+    status: z.string(),
+    statusType: workflowStateTypeSchema,
+    team: z.string(),
+    teamId: z.string(),
+    project: z.string().nullable().default(null),
+    projectId: z.string().nullable().default(null),
+    priority: priorityFieldSchema.default(null),
+    labels: labelArraySchema,
+    gitBranchName: z.string().nullable().default(null),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    startedAt: z.string().nullable().default(null),
+    completedAt: z.string().nullable().default(null),
+    canceledAt: z.string().nullable().default(null),
+    archivedAt: z.string().nullable().default(null),
+    dueDate: z.string().nullable().default(null),
+  })
+  .passthrough()
+  .transform(
+    (raw): LinearIssue => ({
+      identifier: raw.id,
+      title: raw.title,
+      description: raw.description,
+      url: raw.url,
+      status: raw.status,
+      statusType: raw.statusType,
+      team: raw.team,
+      teamId: raw.teamId,
+      project: raw.project,
+      projectId: raw.projectId,
+      priority: raw.priority,
+      labels: raw.labels,
+      gitBranchName: raw.gitBranchName,
+      createdAt: raw.createdAt,
+      updatedAt: raw.updatedAt,
+      startedAt: raw.startedAt,
+      completedAt: raw.completedAt,
+      canceledAt: raw.canceledAt,
+      archivedAt: raw.archivedAt,
+      dueDate: raw.dueDate,
+    }),
+  );
 
-const listIssuesSchema = z.object({
-  issues: z.array(issueSchema),
-});
+const commentUserSchema = z
+  .union([z.string(), z.object({ name: z.string() }).passthrough(), z.null()])
+  .transform((v) => {
+    if (v === null) return null;
+    return typeof v === 'string' ? v : v.name;
+  });
+
+const commentSchema = z
+  .object({
+    id: z.string(),
+    body: z.string(),
+    // Linear's save_comment response does not always include `url`; treat as
+    // optional and synthesise an empty string when missing. Callers should
+    // treat empty-string urls as "no permalink available".
+    url: z.string().optional().default(''),
+    createdAt: z.string(),
+    user: commentUserSchema.optional().default(null),
+    userId: z.string().nullable().optional().default(null),
+  })
+  .passthrough()
+  .transform(
+    (raw): LinearComment => ({
+      id: raw.id,
+      body: raw.body,
+      url: raw.url,
+      createdAt: raw.createdAt,
+      user: raw.user,
+      userId: raw.userId,
+    }),
+  );
+
+const listIssuesSchema = z
+  .union([
+    z.object({ issues: z.array(issueSchema) }),
+    z.array(issueSchema).transform((issues) => ({ issues })),
+  ])
+  .transform((v) => v);
 
 // -----------------------------------------------------------------------------
 // callTool helper
@@ -115,7 +162,8 @@ interface CallToolArgs<T> {
   client: LinearMcpClient;
   tool: string;
   arguments: Record<string, unknown>;
-  schema: z.ZodType<T>;
+  // Use the 3-type form so transform-producing schemas (input != output) fit.
+  schema: z.ZodType<T, z.ZodTypeDef, unknown>;
 }
 
 interface NormalizedToolResult {

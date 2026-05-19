@@ -97,29 +97,11 @@ export interface LinearMcpClientCacheKey {
 // -----------------------------------------------------------------------------
 // Linear domain types
 // -----------------------------------------------------------------------------
-// These mirror the fields SPEX actually consumes from Linear; they are
-// deliberately narrower than Linear's full GraphQL schema. Each interface has
-// a paired zod schema in `operations.ts` used to validate MCP tool responses
-// at the integration boundary.
-
-export interface LinearUser {
-  id: string;
-  name: string;
-  displayName: string;
-  email: string | null;
-}
-
-export interface LinearLabel {
-  id: string;
-  name: string;
-  color: string | null;
-}
-
-export interface LinearTeam {
-  id: string;
-  key: string;
-  name: string;
-}
+// These mirror the actual JSON returned by Linear's MCP server at
+// https://mcp.linear.app/mcp — the server returns flat objects (no nested
+// `{id, name, type}` for status, no `{id, name}` for team) plus parallel
+// `<thing>Id` fields where a UUID is needed. We expose that shape directly
+// so callers never need to consult two unrelated docs to know what to read.
 
 export type LinearWorkflowStateType =
   | 'triage'
@@ -129,26 +111,43 @@ export type LinearWorkflowStateType =
   | 'completed'
   | 'canceled';
 
-export interface LinearIssueStatus {
+export interface LinearTeam {
   id: string;
   name: string;
-  type: LinearWorkflowStateType;
 }
 
 export interface LinearIssue {
-  id: string;
-  /** Human-readable identifier, e.g. `SPX-47`. */
+  /**
+   * Human-readable identifier, e.g. `SPX-47`. The Linear MCP server uses
+   * this as its `id` field — there is no separate UUID id at the issue
+   * level.
+   */
   identifier: string;
   title: string;
   description: string | null;
   url: string;
-  status: LinearIssueStatus;
-  team: LinearTeam;
-  assignee: LinearUser | null;
-  labels: LinearLabel[];
-  priority: number;
+  /** Workflow state name, e.g. `In Progress`. */
+  status: string;
+  statusType: LinearWorkflowStateType;
+  /** Team name. */
+  team: string;
+  teamId: string;
+  /** Project name (or `null` when the issue isn't in a project). */
+  project: string | null;
+  projectId: string | null;
+  /** 0=None, 1=Urgent, 2=High, 3=Medium, 4=Low. `null` when unset. */
+  priority: number | null;
+  /** Label names. */
+  labels: string[];
+  /** Linear-generated git branch name (e.g. `admin/spx-47-...`). */
+  gitBranchName: string | null;
   createdAt: string;
   updatedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  canceledAt: string | null;
+  archivedAt: string | null;
+  dueDate: string | null;
 }
 
 export interface LinearComment {
@@ -156,5 +155,7 @@ export interface LinearComment {
   body: string;
   url: string;
   createdAt: string;
-  user: LinearUser | null;
+  /** Display name of the comment author (or `null` for app-posted comments). */
+  user: string | null;
+  userId: string | null;
 }

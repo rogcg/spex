@@ -131,7 +131,7 @@ export async function runLinearSyncCommand(options: LinearSyncCommandOptions = {
       statusMapping: linearConfig.status_mapping,
       commentOnUnmergedClose: linearConfig.comment_on_unmerged_close,
     });
-    console.log(STRINGS.linearSyncCommand.synced({ linearId, status: result.issue.status.name }));
+    console.log(STRINGS.linearSyncCommand.synced({ linearId, status: result.issue.status }));
     if (result.comment !== null) {
       console.log(STRINGS.linearSyncCommand.commentPosted(result.comment.url));
     }

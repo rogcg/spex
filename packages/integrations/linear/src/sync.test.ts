@@ -25,18 +25,26 @@ function makeClient(callTool: ReturnType<typeof vi.fn>): LinearMcpClient {
 }
 
 const issueResponse = {
-  id: 'iss_1',
-  identifier: 'SPX-47',
+  id: 'SPX-47',
   title: 'Linear MCP Client',
   description: null,
   url: 'https://linear.app/spex/issue/SPX-47',
-  status: { id: 's', name: 'In Review', type: 'started' },
-  team: { id: 't', key: 'SPX', name: 'SPEX' },
-  assignee: null,
+  status: 'In Review',
+  statusType: 'started',
+  team: 'SPEX',
+  teamId: 'fcc025cd-897e-46cd-9e23-fdc2aff14578',
+  project: null,
+  projectId: null,
+  priority: { value: 3, name: 'Medium' },
   labels: [],
-  priority: 3,
+  gitBranchName: 'admin/spx-47-linear-mcp-client',
   createdAt: '2026-05-19T00:00:00Z',
   updatedAt: '2026-05-19T00:00:00Z',
+  startedAt: '2026-05-19T00:00:00Z',
+  completedAt: null,
+  canceledAt: null,
+  archivedAt: null,
+  dueDate: null,
 };
 
 const commentResponse = {
@@ -45,6 +53,7 @@ const commentResponse = {
   url: 'https://linear.app/spex/issue/SPX-47#comment-1',
   createdAt: '2026-05-19T00:00:00Z',
   user: null,
+  userId: null,
 };
 
 describe('extractLinearIdFromPrBody', () => {

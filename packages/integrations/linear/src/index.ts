@@ -33,11 +33,8 @@ export type {
   CreateLinearMcpClientOptions,
   LinearComment,
   LinearIssue,
-  LinearIssueStatus,
-  LinearLabel,
   LinearMcpClient,
   LinearMcpClientCacheKey,
   LinearTeam,
-  LinearUser,
   LinearWorkflowStateType,
 } from './types.js';

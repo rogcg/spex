@@ -22,18 +22,26 @@ describe('isLinearIssueIdentifier', () => {
 
 function issue(overrides: Partial<LinearIssue> = {}): LinearIssue {
   return {
-    id: 'uuid',
     identifier: 'SPX-47',
     title: 'Linear MCP Client',
     description: 'Sprint 6 Step 1',
     url: 'https://linear.app/spex/issue/SPX-47',
-    status: { id: 's', name: 'In Progress', type: 'started' },
-    team: { id: 't', key: 'SPX', name: 'SPEX' },
-    assignee: null,
-    labels: [],
+    status: 'In Progress',
+    statusType: 'started',
+    team: 'SPEX',
+    teamId: 'team-uuid',
+    project: null,
+    projectId: null,
     priority: 3,
+    labels: [],
+    gitBranchName: null,
     createdAt: '2026-05-19T00:00:00Z',
     updatedAt: '2026-05-19T00:00:00Z',
+    startedAt: null,
+    completedAt: null,
+    canceledAt: null,
+    archivedAt: null,
+    dueDate: null,
     ...overrides,
   };
 }
