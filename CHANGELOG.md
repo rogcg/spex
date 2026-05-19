@@ -9,6 +9,22 @@ While SPEX is on `0.x`, any minor release may contain breaking changes to CLI
 flags, `.ai/` artifact formats, MCP tool shapes, or schema definitions. Pin to
 a specific version (or commit SHA, until npm publish) if you need stability.
 
+## [0.5.2] — 2026-05-19
+
+### Fixed
+
+- **CI lint.** v0.5.0 and v0.5.1 release commits failed CI because the
+  version-bump rewrite reformatted `"files": ["dist"]` arrays in every
+  workspace `package.json` to multi-line form, which biome's formatter
+  rejected. `pnpm exec biome format --write .` collapsed them back.
+  v0.5.0 and v0.5.1 tags still point at red commits; v0.5.2 is the
+  first green release.
+
+### Added
+
+- **CI status badge** in the README. Future regressions are visible
+  from the front door.
+
 ## [0.5.1] — 2026-05-19
 
 ### Fixed
@@ -178,6 +194,7 @@ a specific version (or commit SHA, until npm publish) if you need stability.
 - CI workflow (`.github/workflows/ci.yml`) running install, lint,
   typecheck, test on push + PR.
 
+[0.5.2]: https://github.com/rogcg/spex/releases/tag/v0.5.2
 [0.5.1]: https://github.com/rogcg/spex/releases/tag/v0.5.1
 [0.5.0]: https://github.com/rogcg/spex/releases/tag/v0.5.0
 [0.4.0]: https://github.com/rogcg/spex/releases/tag/v0.4.0

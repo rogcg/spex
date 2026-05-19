@@ -1,6 +1,6 @@
 {
   "name": "@spex/cli",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "description": "spex CLI — Spec-driven Programming EXecutor",
   "license": "MIT",

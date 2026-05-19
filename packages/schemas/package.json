@@ -1,6 +1,6 @@
 {
   "name": "@spex/schemas",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "description": "Zod schemas for SPEX-managed artifacts",
   "license": "MIT",
