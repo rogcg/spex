@@ -4,22 +4,36 @@
 
 > AI agent orchestration framework for software development, based on versioned specs and human approval gates.
 
-> ⚠️ **Work in progress — do NOT use for real projects.** SPEX is under active development and is **not production-ready**. CLI flags, package APIs, `.ai/` artifact formats, and MCP tool shapes may change without notice and without migration paths. Expect breakages, partial features, and undocumented behavior. Use it on throwaway sandboxes for evaluation only. Not yet published to npm — install from a checkout (see below).
+> ⚠️ **Work in progress — do NOT use for real projects.** SPEX is under active development and is **not production-ready**. CLI flags, package APIs, `.ai/` artifact formats, and MCP tool shapes may change without notice and without migration paths. Expect breakages, partial features, and undocumented behavior. Use it on throwaway sandboxes for evaluation only.
 
-See [`CLAUDE.md`](./CLAUDE.md) for the architectural decisions and code conventions.
+See [`CLAUDE.md`](./CLAUDE.md) for the architectural decisions and code conventions, and [`CHANGELOG.md`](./CHANGELOG.md) for the per-release diff.
 
 ## Requirements
 
 - Node.js 20 LTS or newer
 - pnpm 9 or newer
 - An `ANTHROPIC_API_KEY` set in your environment (see `.env.example`)
+- A `GITHUB_TOKEN` if you want SPEX to push branches / open PRs / post review comments
 
-## Quick start (from a checkout)
+## Install from GitHub
+
+SPEX is **not yet published to npm.** Until then, install by cloning this repo and building from source:
 
 ```bash
+git clone https://github.com/rogcg/spex.git
+cd spex
 pnpm install
 pnpm -r run build
 ```
+
+The CLI entry point is then `node packages/cli/dist/index.js`. To use it like a normal command you can symlink it onto your `PATH`:
+
+```bash
+# optional convenience: put `spex` on $PATH
+pnpm --filter @spex/cli link --global
+```
+
+To pin to a specific release, check out a tag before building (e.g. `git checkout v0.5.0`). The `npm install -g spex` install will land in a future release sprint.
 
 ### Create a new project — `spex new`
 
@@ -86,6 +100,33 @@ Six-phase pipeline (each previewed and gated by default):
 6. Verify fail-then-pass, then commit.
 
 Flags: `--auto`, `--dry-run`, `--no-git`, `-a/--affected <path>`, `--error-message`, `--error-stack`.
+
+### Review a pull request — `spex review`
+
+```bash
+cd my-saas    # project with .ai/config.yaml containing integrations.github
+GITHUB_TOKEN=ghp_... ANTHROPIC_API_KEY=sk-... \
+  node /path/to/spex/packages/cli/dist/index.js review \
+  https://github.com/owner/repo/pull/42
+```
+
+Fetches the PR + diff, locates the linked feature spec via branch convention (`feature/<slug>` → `.ai/specs/<slug>.yaml`), generates a structured review across four sections (spec compliance, conventions, performance/security, test coverage), and posts the rendered Markdown as a PR comment.
+
+Flags: `--auto` (skip confirm-before-post), `--dry-run` (preview without posting). `integrations.github.review_mode` in `.ai/config.yaml` selects `single` (one LLM call) or `split` (four parallel calls, one per section).
+
+### Install GitHub Actions workflow templates — `spex github setup`
+
+```bash
+cd my-saas
+node /path/to/spex/packages/cli/dist/index.js github setup
+```
+
+Writes two workflows to `.github/workflows/`:
+
+- `pr-review.yml` — auto-review every newly opened PR.
+- `implement-from-issue.yml` — when an issue is labelled `spex:implement`, SPEX implements it on a branch and opens a PR.
+
+Both workflows install SPEX from this repo via `actions/checkout` + `pnpm install` + `pnpm -r build` until SPEX is published to npm. The `SPEX_REPO` and `SPEX_REF` env vars at the top of each template let you pin a tag or a fork. The workflows require repo secrets `ANTHROPIC_API_KEY` (the default `GITHUB_TOKEN` provided by Actions is sufficient for the rest).
 
 ### Run as an MCP server — `spex mcp-server`
 

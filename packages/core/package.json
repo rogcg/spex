@@ -1,6 +1,6 @@
 {
   "name": "@spex/core",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "Core orchestration library for SPEX — LLM, discovery, tech-spec, scaffold",
   "license": "MIT",
@@ -22,7 +22,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
