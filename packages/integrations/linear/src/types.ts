@@ -93,3 +93,68 @@ export interface LinearMcpClientCacheKey {
   baseUrl: string;
   apiKeyFingerprint: string;
 }
+
+// -----------------------------------------------------------------------------
+// Linear domain types
+// -----------------------------------------------------------------------------
+// These mirror the fields SPEX actually consumes from Linear; they are
+// deliberately narrower than Linear's full GraphQL schema. Each interface has
+// a paired zod schema in `operations.ts` used to validate MCP tool responses
+// at the integration boundary.
+
+export interface LinearUser {
+  id: string;
+  name: string;
+  displayName: string;
+  email: string | null;
+}
+
+export interface LinearLabel {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
+export interface LinearTeam {
+  id: string;
+  key: string;
+  name: string;
+}
+
+export type LinearWorkflowStateType =
+  | 'triage'
+  | 'backlog'
+  | 'unstarted'
+  | 'started'
+  | 'completed'
+  | 'canceled';
+
+export interface LinearIssueStatus {
+  id: string;
+  name: string;
+  type: LinearWorkflowStateType;
+}
+
+export interface LinearIssue {
+  id: string;
+  /** Human-readable identifier, e.g. `SPX-47`. */
+  identifier: string;
+  title: string;
+  description: string | null;
+  url: string;
+  status: LinearIssueStatus;
+  team: LinearTeam;
+  assignee: LinearUser | null;
+  labels: LinearLabel[];
+  priority: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LinearComment {
+  id: string;
+  body: string;
+  url: string;
+  createdAt: string;
+  user: LinearUser | null;
+}
