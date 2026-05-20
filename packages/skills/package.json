@@ -1,0 +1,44 @@
+{
+  "name": "@spex/skills",
+  "version": "0.8.0",
+  "private": true,
+  "description": "Skill bundles for SPEX — markdown-based agent instructions + loader",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rogcg/spex.git",
+    "directory": "packages/skills"
+  },
+  "homepage": "https://github.com/rogcg/spex#readme",
+  "bugs": {
+    "url": "https://github.com/rogcg/spex/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "spex-discovery"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "yaml": "^2.6.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
