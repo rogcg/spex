@@ -7,6 +7,12 @@ export interface Question {
   prompt: string;
   type: 'input' | 'select' | 'multi-select' | 'confirm';
   choices?: readonly string[];
+  /**
+   * Optional pre-populated rationale shown by the `/why` navigation command.
+   * Architect-agent-generated questions may populate this; static questions
+   * generally do not.
+   */
+  rationale?: string;
 }
 
 export const SPRINT_1_QUESTIONS: readonly Question[] = [

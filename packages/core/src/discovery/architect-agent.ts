@@ -49,6 +49,7 @@ Your role: ask one question at a time, with each question informed by previous a
 - Each question must have: an \`id\` (snake_case identifier), a \`prompt\` (the question text shown to the user), a \`type\` (one of: input, select, multi-select, confirm), and \`choices\` (required and with at least 2 entries for select and multi-select).
 - Choose the question type that best fits the answer space. Prefer \`select\` over \`input\` when there is a natural finite set of choices.
 - Build on prior answers — don't repeat questions or ignore context.
+- Always include a \`rationale\` (one or two sentences) explaining why you are asking this specific question now, given the prior answers. The rationale is shown to the user if they invoke the \`/why\` navigation command.
 
 ## Standard concept keys
 
@@ -168,10 +169,11 @@ function toQuestion(parsed: z.infer<typeof QuestionSchema>): Question {
     prompt: parsed.prompt,
     type: parsed.type,
   };
-  if (parsed.choices !== undefined) {
-    return { ...base, choices: parsed.choices };
-  }
-  return base;
+  const withChoices: Question =
+    parsed.choices !== undefined ? { ...base, choices: parsed.choices } : base;
+  return parsed.rationale !== undefined
+    ? { ...withChoices, rationale: parsed.rationale }
+    : withChoices;
 }
 
 function formatHistory(history: readonly DiscoveryHistoryEntry[]): string {

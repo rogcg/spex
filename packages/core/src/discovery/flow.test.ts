@@ -1,13 +1,21 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { parse as parseYaml } from 'yaml';
 import { SpexError } from '../errors.js';
 import type { ArchitectAgent, ArchitectStep, GapAssessment } from './architect-agent.js';
 import type { Question } from './questions.js';
 
-const { mockInput, mockSelect, mockCheckbox, mockConfirm } = vi.hoisted(() => ({
+const { mockInput, mockSelect, mockCheckbox, mockConfirm, mockSeparator } = vi.hoisted(() => ({
   mockInput: vi.fn(),
   mockSelect: vi.fn(),
   mockCheckbox: vi.fn(),
   mockConfirm: vi.fn(),
+  mockSeparator: vi.fn().mockImplementation(function MockSeparator(this: { isSeparator: true }) {
+    this.isSeparator = true;
+    return this;
+  }),
 }));
 
 vi.mock('@inquirer/prompts', () => ({
@@ -15,9 +23,10 @@ vi.mock('@inquirer/prompts', () => ({
   select: mockSelect,
   checkbox: mockCheckbox,
   confirm: mockConfirm,
+  Separator: mockSeparator,
 }));
 
-const { runDiscovery, runAdaptiveDiscovery } = await import('./flow.js');
+const { DiscoveryPausedError, runDiscovery, runAdaptiveDiscovery } = await import('./flow.js');
 
 describe('runDiscovery (static questions)', () => {
   beforeEach(() => {
@@ -270,5 +279,163 @@ describe('runAdaptiveDiscovery', () => {
     await expect(runAdaptiveDiscovery({ agent, confirmCriticalGap: confirmHook })).rejects.toThrow(
       SpexError,
     );
+  });
+});
+
+describe('runDiscovery (static + navigation)', () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    mockInput.mockReset();
+    mockSelect.mockReset();
+    mockCheckbox.mockReset();
+    mockConfirm.mockReset();
+    dir = await mkdtemp(join(tmpdir(), 'spex-nav-static-'));
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  const twoQuestions: readonly Question[] = [
+    { id: 'a', prompt: 'A?', type: 'input' },
+    { id: 'b', prompt: 'B?', type: 'input' },
+  ];
+
+  it('skips a question and excludes it from the answers', async () => {
+    // First call: skip; second call: answer; third call: answer
+    mockInput.mockResolvedValueOnce('/skip').mockResolvedValueOnce('answer-a');
+    // Re-asking second question
+    mockInput.mockResolvedValueOnce('answer-b');
+
+    const answers = await runDiscovery(twoQuestions, { nav: {} });
+    // After /skip on question A, we advance to B. After answering B, done.
+    // So answers should be { b: 'answer-b' } (A was skipped).
+    expect(answers).toEqual({ b: 'answer-a' });
+  });
+
+  it('back goes to the previous question and lets the user re-answer', async () => {
+    mockInput
+      .mockResolvedValueOnce('first-answer') // answer A
+      .mockResolvedValueOnce('/back') // on B, go back
+      .mockResolvedValueOnce('updated-a') // re-answer A
+      .mockResolvedValueOnce('answer-b'); // answer B
+
+    const answers = await runDiscovery(twoQuestions, { nav: {} });
+    expect(answers).toEqual({ a: 'updated-a', b: 'answer-b' });
+  });
+
+  it('pause persists state to scratchPath and throws DiscoveryPausedError', async () => {
+    const scratchPath = join(dir, '.ai', 'scratch', 'discovery.yaml');
+    mockInput
+      .mockResolvedValueOnce('answer-a') // answer A
+      .mockResolvedValueOnce('/pause'); // pause on B
+
+    await expect(runDiscovery(twoQuestions, { nav: { scratchPath } })).rejects.toBeInstanceOf(
+      DiscoveryPausedError,
+    );
+
+    const written = await readFile(scratchPath, 'utf8');
+    const state = parseYaml(written);
+    expect(state.version).toBe(1);
+    expect(state.source).toBe('static');
+    expect(state.history).toEqual([
+      { question: { id: 'a', prompt: 'A?', type: 'input' }, answer: 'answer-a' },
+    ]);
+  });
+});
+
+describe('runAdaptiveDiscovery (with navigation)', () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    mockInput.mockReset();
+    mockSelect.mockReset();
+    mockCheckbox.mockReset();
+    mockConfirm.mockReset();
+    dir = await mkdtemp(join(tmpdir(), 'spex-nav-adaptive-'));
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  const completeGap: GapAssessment = {
+    status: 'complete',
+    missing: [],
+    rationale: 'Done.',
+  };
+
+  function makeAgent(seed: Question, steps: ArchitectStep[]): ArchitectAgent {
+    const nextStep = vi.fn<ArchitectAgent['nextStep']>();
+    for (const step of steps) {
+      nextStep.mockResolvedValueOnce(step);
+    }
+    return { seedQuestion: () => seed, nextStep };
+  }
+
+  it('skip pushes a SKIPPED marker and excludes the id from final answers', async () => {
+    mockInput.mockResolvedValueOnce('/skip'); // skip the seed
+    const seed: Question = { id: 'seed', prompt: 'Seed?', type: 'input' };
+    const followUp: Question = { id: 'next_q', prompt: 'Next?', type: 'input' };
+    mockInput.mockResolvedValueOnce('the-answer');
+
+    const agent = makeAgent(seed, [
+      { type: 'question', question: followUp },
+      { type: 'done', gap: completeGap },
+    ]);
+
+    const result = await runAdaptiveDiscovery({ agent, nav: {} });
+    expect(result.answers).toEqual({ next_q: 'the-answer' });
+    expect(result.answers.seed).toBeUndefined();
+  });
+
+  it('back pops the last history entry and re-asks that question', async () => {
+    const seed: Question = { id: 'seed', prompt: 'Seed?', type: 'input' };
+    const followUp: Question = { id: 'next_q', prompt: 'Next?', type: 'input' };
+
+    mockInput
+      .mockResolvedValueOnce('seed-answer') // answer seed
+      .mockResolvedValueOnce('/back') // on next_q, go back
+      .mockResolvedValueOnce('updated-seed') // re-answer seed
+      .mockResolvedValueOnce('next-answer'); // answer next_q
+
+    const agent: ArchitectAgent = {
+      seedQuestion: () => seed,
+      nextStep: vi
+        .fn<ArchitectAgent['nextStep']>()
+        .mockResolvedValueOnce({ type: 'question', question: followUp })
+        .mockResolvedValueOnce({ type: 'question', question: followUp })
+        .mockResolvedValueOnce({ type: 'done', gap: completeGap }),
+    };
+
+    const result = await runAdaptiveDiscovery({ agent, nav: {} });
+    expect(result.answers).toEqual({ seed: 'updated-seed', next_q: 'next-answer' });
+  });
+
+  it('pause persists state and throws DiscoveryPausedError', async () => {
+    const scratchPath = join(dir, 'scratch.yaml');
+    const seed: Question = { id: 'seed', prompt: 'Seed?', type: 'input' };
+
+    mockInput.mockResolvedValueOnce('seed-answer').mockResolvedValueOnce('/pause');
+
+    const agent: ArchitectAgent = {
+      seedQuestion: () => seed,
+      nextStep: vi.fn<ArchitectAgent['nextStep']>().mockResolvedValueOnce({
+        type: 'question',
+        question: { id: 'q2', prompt: 'Q2?', type: 'input' },
+      }),
+    };
+
+    await expect(runAdaptiveDiscovery({ agent, nav: { scratchPath } })).rejects.toBeInstanceOf(
+      DiscoveryPausedError,
+    );
+
+    const written = await readFile(scratchPath, 'utf8');
+    const state = parseYaml(written);
+    expect(state.source).toBe('adaptive');
+    expect(state.history).toEqual([
+      { question: { id: 'seed', prompt: 'Seed?', type: 'input' }, answer: 'seed-answer' },
+    ]);
   });
 });
