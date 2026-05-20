@@ -22,10 +22,7 @@
       "import": "./dist/index.js"
     }
   },
-  "files": [
-    "dist",
-    "spex-*"
-  ],
+  "files": ["dist", "spex-*"],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
