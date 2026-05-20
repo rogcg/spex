@@ -35,7 +35,7 @@ The CLI entry point is then `node packages/cli/dist/index.js`. To use it like a 
 pnpm --filter @spex/cli link --global
 ```
 
-To pin to a specific release, check out a tag before building (e.g. `git checkout v0.5.0`). The `npm install -g spex` install will land in a future release sprint.
+To pin to a specific release, check out a tag before building (e.g. `git checkout v0.9.0`). An `npm install -g spex` install is not available yet.
 
 ### Create a new project — `spex new`
 
@@ -43,7 +43,7 @@ To pin to a specific release, check out a tag before building (e.g. `git checkou
 ANTHROPIC_API_KEY=sk-... node packages/cli/dist/index.js new my-saas
 ```
 
-1. Run discovery (static 5-question flow by default in v0.9.0; the adaptive architect-driven flow is available via the library API — see "Adaptive discovery" below).
+1. Run discovery — a static 5-question flow by default. An adaptive architect-driven flow is also available via the library API; see [Adaptive discovery](#adaptive-discovery) below.
 2. Generate a `tech-spec.yaml` via Claude.
 3. Show the spec and ask for approval.
 4. Scaffold a Next.js application via `create-next-app`.
@@ -143,7 +143,7 @@ Full Skills overview, including the format, the shipped library, and how to auth
 
 ## Adaptive discovery
 
-The discovery flow used by `spex new` and `spex init` is, by default, the static Sprint 1 5-question script. From v0.9.0 a richer **architect-driven adaptive** flow is also available via the library API:
+The discovery flow used by `spex new` and `spex init` is, by default, a static 5-question script. A richer **architect-driven adaptive** flow is also available via the library API:
 
 ```ts
 import { AnthropicProvider, createArchitectAgent, runAdaptiveDiscovery } from '@spex/core';
@@ -171,7 +171,7 @@ The architect agent asks one question at a time, with each question informed by 
 | `/pause` | Save state to `.ai/scratch/discovery.yaml` and exit (throws `DiscoveryPausedError`). |
 | `/?` (alias `/help`) | Show available commands. |
 
-The CLI commands (`spex new`, `spex init`) will be wired to `runAdaptiveDiscovery` in a follow-up sprint; the library API is the entry point for now.
+The CLI commands (`spex new`, `spex init`) are not yet wired to `runAdaptiveDiscovery` — the library API is the entry point.
 
 ## Optional integrations
 

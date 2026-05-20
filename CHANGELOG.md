@@ -14,19 +14,19 @@ a specific version (or commit SHA, until npm publish) if you need stability.
 ### Added — Adaptive discovery
 
 - **Architect agent** (`@spex/core` `createArchitectAgent`). Replaces
-  Sprint 1's hardcoded 5-question script with an LLM-driven adaptive
+  the prior hardcoded 5-question script with an LLM-driven adaptive
   interviewer. Each `nextStep` call asks the model for either the next
   question (informed by all prior answers) or a done signal with a gap
   assessment. Structured output is validated via a zod discriminated
   union; the existing `LLMProvider` abstraction is unchanged. The system
-  prompt instructs the model to reuse the five standard Sprint 1 keys
+  prompt instructs the model to reuse the five standard concept keys
   (`project_type`, `primary_users`, `expected_scale`,
   `auth_requirements`, `data_persistence`) so the existing TechSpec
   generator keeps working.
 - **Extended question types.** `Question.type` now covers `input`,
   `select`, `multi-select`, and `confirm`. `DiscoveryAnswers` values
-  broaden to `string | string[] | boolean`. Sprint 1 questions and
-  consumers are unchanged.
+  broaden to `string | string[] | boolean`. The existing question
+  definitions and downstream consumers are unchanged.
 - **Gap detection** (`GapAssessment`). The architect tags the end of an
   interview as `complete`, `nice_to_have_missing`, or `critical_missing`
   with a human-readable rationale and a list of missing items. On
@@ -44,7 +44,7 @@ a specific version (or commit SHA, until npm publish) if you need stability.
   round-trip the history + skipped ids with a `DiscoveryStateSchema`
   zod schema. Pause throws `DiscoveryPausedError` after writing state.
 - Discovery split into two entry points: `runDiscovery(questions,
-  options?)` (static — Sprint 1 backward-compatible default) and
+  options?)` (static — backward-compatible default) and
   `runAdaptiveDiscovery({ agent, confirmCriticalGap?, nav? })`
   (architect-driven, returns `DiscoveryResult` with answers + gap +
   optional override).
@@ -85,11 +85,11 @@ a specific version (or commit SHA, until npm publish) if you need stability.
 ### Deferred to a follow-up
 
 - Wiring `spex new` / `spex init` to use `runAdaptiveDiscovery`. Both
-  CLI commands still call the static `runDiscovery` for v0.9.0; the
-  adaptive flow is available via the library API and via consumers of
-  the MCP `spex-discovery` skill.
-- Resume from `.ai/scratch/discovery.yaml` (load is implemented;
-  re-entering an interview mid-stream is a Sprint 12 deliverable).
+  CLI commands still call the static `runDiscovery`; the adaptive flow
+  is available via the library API and via consumers of the MCP
+  `spex-discovery` skill.
+- Resume from `.ai/scratch/discovery.yaml` — `loadDiscoveryState` is
+  implemented; re-entering an interview mid-stream is not yet wired up.
 - Persisting gap-override decisions into a structured audit trail
   alongside `runAdaptiveDiscovery`'s in-memory result.
 
@@ -171,7 +171,7 @@ a specific version (or commit SHA, until npm publish) if you need stability.
 - Wiring the notification dispatchers directly into `spex implement` /
   `spex fix` / `spex review`. The templates and dispatchers are
   callable today; the auto-post hookpoints in those flows will land
-  in a follow-up sprint together with the spec/fix-proposed approval
+  in a follow-up release together with the spec/fix-proposed approval
   gate integration.
 
 ### Known issues
@@ -323,8 +323,8 @@ a specific version (or commit SHA, until npm publish) if you need stability.
 - Workflow templates install SPEX from the public GitHub repo via
   `actions/checkout` + `pnpm install` + `pnpm -r build`. `SPEX_REPO` and
   `SPEX_REF` env vars at the top of each template let users pin a tag.
-  Once SPEX is published to npm (deferred to a future release sprint),
-  these will collapse to `npm install -g spex`.
+  Once SPEX is published to npm (not available yet), these will collapse
+  to `npm install -g spex`.
 
 ### Verified
 

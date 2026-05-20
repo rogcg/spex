@@ -18,7 +18,7 @@ This skill creates a new project under SPEX management. Use it when the user has
 1. Validates the project name (lowercase letters, numbers, dashes only).
 2. Runs the discovery flow — the architect agent asks adaptive questions about project type, primary users, expected scale, auth requirements, data persistence, and any project-specific concerns. See [[spex-discovery]] for the full discovery model (gap detection, navigation commands, pause/resume).
 3. Generates a structured **TechSpec** via Claude and shows it to the user for approval.
-4. Scaffolds the chosen stack (Next.js by default in v0.9.0; the planner generalises to other stacks in later sprints).
+4. Scaffolds the chosen stack (currently Next.js).
 5. Writes `.ai/tech-spec.yaml` + supporting files into the new project.
 6. Initialises git in the new project with a first commit recording the `.ai/` folder.
 
@@ -52,4 +52,4 @@ The `spex_new` MCP tool exposes the same flow to Claude Code, Cursor, and other 
 
 - The user is shown the generated TechSpec before any scaffolding runs and must approve it. Reject → no files are written.
 - All user-facing strings shown by the CLI are centralised in `packages/cli/src/strings.ts` and may be reworded for i18n in the future.
-- The discovery flow used by `spex new` is the static Sprint 1 flow in v0.9.0; the adaptive architect-driven flow is available via the library API and will be wired into this command in a follow-up sprint.
+- The discovery flow used by `spex new` is the static 5-question flow. The adaptive architect-driven flow is available via the library API but is not yet wired into this command.

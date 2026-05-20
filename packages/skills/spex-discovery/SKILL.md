@@ -42,7 +42,7 @@ For an existing project:
 spex init
 ```
 
-(Both commands use the static Sprint 1 question set by default in v0.9.0. The adaptive architect-driven flow is exposed via the library API; the CLI commands above will be migrated to it in a follow-up sprint.)
+(Both commands use a static question set by default. The adaptive architect-driven flow is exposed via the library API and is not yet wired into the CLI commands above.)
 
 ### Via the importable library
 
