@@ -1,6 +1,14 @@
-# SPEX
+<p align="center">
+  <img src=".github/assets/spex-logo.svg" alt="SPEX — Spec-driven Programming EXecutor" width="520">
+</p>
 
-[![CI](https://github.com/rogcg/spex/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rogcg/spex/actions/workflows/ci.yml)
+<p align="center">
+  <a href="https://github.com/rogcg/spex/actions/workflows/ci.yml"><img src="https://github.com/rogcg/spex/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="https://github.com/rogcg/spex/releases/latest"><img src="https://img.shields.io/github/v/release/rogcg/spex?display_name=tag&sort=semver" alt="Release"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/rogcg/spex" alt="License: MIT"></a>
+</p>
+
+# SPEX
 
 **Spec-driven Programming EXecutor**
 
