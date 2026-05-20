@@ -4,17 +4,19 @@ import { resolve } from 'node:path';
 import { confirm } from '@inquirer/prompts';
 import {
   AnthropicProvider,
+  type DiscoveryResult,
   MissingApiKeyError,
   ProposalPausedError,
   ScaffoldFailedError,
   appendDecisionAuditEntry,
   assembleTechSpec,
   auditLogPath,
+  createArchitectAgent,
   generateProposalDecisions,
   injectAiFolder,
   loadProposalState,
+  runAdaptiveDiscovery,
   runCommand,
-  runDiscovery,
   runProposalApproval,
   runScaffold,
   techSpecToYaml,
@@ -93,34 +95,33 @@ export async function runNewCommand(
   let initialDecisions: Decision[];
   let startIndex = 0;
   let stackDecisionResult: Awaited<ReturnType<typeof runStackSelection>>;
-  let answers: Awaited<ReturnType<typeof runDiscovery>>;
+  let discoveryResult: DiscoveryResult;
 
   if (resumeState) {
-    // Resume path: rehydrate decisions from scratch state.
-    // The discovery + stack decision must be reconstructed from the resolved
-    // values on the decision list. For Sprint 11 we keep this simple: prompt
-    // the user to re-run discovery + stack selection to pick up where we left
-    // off in the iterative gates. The decision list itself is preserved.
+    // Resume path: rehydrate decisions from scratch state. Discovery and
+    // stack selection are re-run because they're cheap and they re-populate
+    // the in-memory state used by downstream steps; the decision list itself
+    // is preserved verbatim and we re-enter the gates at the saved index.
     console.log(STRINGS.newCommand.discoveryHeader);
-    answers = await runDiscovery();
+    discoveryResult = await runAdaptiveDiscovery({ agent: createArchitectAgent({ llm }) });
     console.log(STRINGS.newCommand.selectingStackHeader);
     stackDecisionResult = await runStackSelection({
       llm,
       projectName,
-      answers,
+      answers: discoveryResult.answers,
       entry: pickEntryState(options),
     });
     initialDecisions = resumeState.decisions;
     startIndex = resumeState.currentIndex;
   } else {
     console.log(STRINGS.newCommand.discoveryHeader);
-    answers = await runDiscovery();
+    discoveryResult = await runAdaptiveDiscovery({ agent: createArchitectAgent({ llm }) });
 
     console.log(STRINGS.newCommand.selectingStackHeader);
     stackDecisionResult = await runStackSelection({
       llm,
       projectName,
-      answers,
+      answers: discoveryResult.answers,
       entry: pickEntryState(options),
     });
 
@@ -128,7 +129,7 @@ export async function runNewCommand(
     initialDecisions = await generateProposalDecisions({
       llm,
       projectName,
-      answers,
+      answers: discoveryResult.answers,
       decision: stackDecisionResult,
     });
     console.log(STRINGS.newCommand.proposalDecisionCount(initialDecisions.length));
@@ -175,7 +176,7 @@ export async function runNewCommand(
   console.log(STRINGS.newCommand.assembleSpec);
   const spec = assembleTechSpec({
     projectName,
-    answers,
+    answers: discoveryResult.answers,
     stackDecision: stackDecisionResult,
     decisions: approvedDecisions,
   });

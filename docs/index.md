@@ -47,7 +47,7 @@ SPEX is an AI agent orchestration framework for software development, based on *
 |---|---|
 | [CLI reference]({{ site.baseurl }}/cli-reference) | Every `spex` subcommand — arguments, flags, env vars, exit codes, examples. |
 | [Configuration]({{ site.baseurl }}/configuration) | Full `.ai/config.yaml` schema for every integration (GitHub, Linear, PostHog, Slack). |
-| [Discovery & tech spec]({{ site.baseurl }}/discovery-and-techspec) | The discovery flow (static vs adaptive), decision-gate engine, stack recommendation, scaffold planner. |
+| [Discovery & tech spec]({{ site.baseurl }}/discovery-and-techspec) | The adaptive discovery flow, decision-gate engine, stack recommendation, scaffold planner. |
 | [Audit & resume]({{ site.baseurl }}/audit-and-resume) | `.ai/scratch/` and `.ai/audit/` layout, workflow lifecycle, crash recovery, conflict resolution. |
 | [GitHub workflows]({{ site.baseurl }}/github-workflows) | The GitHub Actions templates installed by `spex github setup`. |
 | [MCP integration]({{ site.baseurl }}/mcp-integration) | Wiring SPEX as an MCP server for Claude Code / Cursor / other IDEs. |
@@ -118,7 +118,7 @@ ANTHROPIC_API_KEY=sk-... spex new my-saas
 
 What it does:
 
-1. Runs the discovery flow (static 5-question script by default, or adaptive via the library API).
+1. Runs adaptive discovery — an architect agent asks one question at a time, each informed by all prior answers, until the project profile is complete.
 2. Recommends best-fit stacks based on the discovery profile, with confidence + tradeoffs.
 3. Drafts the tech spec as 10–14 small **decisions**. For each you can `[a]ccept`, `[r]eject`, `[d]ebate`, `[e]xplore`, `[m]odify`, or `[p]ause`.
 4. Plans the scaffold, verifies it (file/dependency/typecheck/build checks), and retries on failure (max 3 attempts).

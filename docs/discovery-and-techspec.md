@@ -2,38 +2,22 @@
 title: Discovery & tech spec
 layout: default
 nav_order: 4
-description: "The discovery flow, decision-gate engine, stack recommendation, and scaffold planner / verifier / self-correction."
+description: "The adaptive discovery flow, decision-gate engine, stack recommendation, and scaffold planner / verifier / self-correction."
 ---
 
 # Discovery, decision gates, stack selection, scaffold
 
 This page is the in-depth reference for the front half of `spex new` and `spex init` — everything between "I want a project called X" and the moment the scaffolder starts running commands.
 
-If you just want the user-facing flow, the README's `spex new` section covers it. This page goes deeper: the static vs adaptive interviewers, the architect agent, the gap classifier, the decision schema, the stack recommendation engine, and the scaffold planner / verifier / self-correction loop.
+If you just want the user-facing flow, the README's `spex new` section covers it. This page goes deeper: the architect agent, the gap classifier, the decision schema, the stack recommendation engine, and the scaffold planner / verifier / self-correction loop.
 
 ---
 
-## Two discovery flows
+## Adaptive discovery (the architect agent)
 
-SPEX ships two discovery flows. The CLI uses the static one by default; the adaptive one is available via the library API and the `spex-discovery` skill.
+SPEX ships a single discovery flow: an LLM-driven architect agent that interviews the user adaptively. There is no fixed question script — every question is generated based on the prior answers.
 
-### Static (default in `spex new` / `spex init`)
-
-A fixed 5-question script. Stable, predictable, fast to run:
-
-| Question id | What it asks |
-|---|---|
-| `project_type` | What kind of application is being built. |
-| `primary_users` | Who the primary users are (Consumers / SMB / Enterprise / Internal team / Developers). |
-| `expected_scale` | Expected first-year scale. |
-| `auth_requirements` | Authentication needs. |
-| `data_persistence` | Data persistence needs. |
-
-Implemented by `runDiscovery(questions, options?)` from `@spex/core`.
-
-### Adaptive (architect agent)
-
-The architect agent is an LLM-driven adaptive interviewer that asks one question at a time, with each question informed by all prior answers. Four question types are supported:
+Four question types are supported:
 
 | Type | UX |
 |---|---|
@@ -42,7 +26,7 @@ The architect agent is an LLM-driven adaptive interviewer that asks one question
 | `multi-select` | Multi-choice list. |
 | `confirm` | Yes / No. |
 
-The system prompt asks the model to reuse the same five canonical concept keys (`project_type`, `primary_users`, `expected_scale`, `auth_requirements`, `data_persistence`) so the existing TechSpec generator continues to work.
+The system prompt asks the model to use five canonical concept keys (`project_type`, `primary_users`, `expected_scale`, `auth_requirements`, `data_persistence`) for the well-known concepts so the downstream TechSpec generator can locate the answers. Beyond those, the architect is free to ask whatever it deems relevant — for example `realtime_features`, `integrations_needed`, `compliance_constraints`.
 
 Implemented by `runAdaptiveDiscovery({ agent, confirmCriticalGap?, nav? })` from `@spex/core`. Returns `{ answers, gap, override? }` where:
 
@@ -67,9 +51,11 @@ const result = await runAdaptiveDiscovery({
 });
 ```
 
+For `spex init`, the agent is seeded with an `INIT_DESCRIPTION_QUESTION` so the architect starts with a one-sentence project description before continuing into the standard concept keys.
+
 ### Gap detection
 
-At the end of an adaptive interview the architect emits a `GapAssessment`:
+At the end of an interview the architect emits a `GapAssessment`:
 
 | Classification | Meaning | Behaviour |
 |---|---|---|
@@ -79,7 +65,7 @@ At the end of an adaptive interview the architect emits a `GapAssessment`:
 
 ### Universal navigation commands
 
-These work in both flows. For `input` questions they're typed inline; for `select` they appear as choices after a separator; `multi-select` and `confirm` get a small pre-step menu.
+For `input` questions, commands are typed inline; for `select` they appear as choices after a separator; `multi-select` and `confirm` get a small pre-step menu.
 
 | Command | Effect |
 |---|---|
@@ -92,8 +78,6 @@ These work in both flows. For `input` questions they're typed inline; for `selec
 ### State persistence
 
 `saveDiscoveryState` / `loadDiscoveryState` round-trip the answer history + skipped ids via a `DiscoveryStateSchema` zod schema. Pause writes the state file and throws `DiscoveryPausedError` so the caller can exit cleanly.
-
-> The CLI commands (`spex new`, `spex init`) currently use the static `runDiscovery`. The adaptive flow is exposed via the library API and the `spex-discovery` skill.
 
 ---
 

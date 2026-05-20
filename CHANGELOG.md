@@ -12,6 +12,23 @@ Starting at `1.0.0`, SPEX commits to backwards-compatible minor releases.
 
 ## [1.0.0] — 2026-05-20
 
+### Changed — Adaptive discovery is now the only discovery flow
+
+- **`spex new` and `spex init` now use `runAdaptiveDiscovery`.** The fixed
+  5-question static script (`SPRINT_1_QUESTIONS` / `INIT_DISCOVERY_QUESTIONS`)
+  has been removed; both CLI commands drive the architect agent directly. The
+  agent asks one question at a time with each question informed by the prior
+  answers, then emits a `GapAssessment` (`complete` / `nice_to_have_missing` /
+  `critical_missing`). For `spex init`, the agent is seeded with
+  `INIT_DESCRIPTION_QUESTION` so the first prompt is a one-sentence project
+  description before the architect takes over.
+- **Removed exports** from `@spex/core`: `SPRINT_1_QUESTIONS`, `runDiscovery`,
+  `RunDiscoveryOptions`, `INIT_DISCOVERY_QUESTIONS`. `INIT_DESCRIPTION_QUESTION`
+  is retained as the init seed.
+- **`DiscoveryStateSchema.source`** is now a literal `"adaptive"` (previously
+  an enum of `"static" | "adaptive"`). Paused discovery state from earlier
+  versions will not load — re-run discovery to regenerate it.
+
 ### Added — Resume capability + audit trail
 
 - **Scratch state schema** (`@spex/schemas` `ScratchStateSchema`,

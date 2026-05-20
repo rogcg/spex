@@ -82,7 +82,7 @@ These decisions MUST NOT be questioned during implementation. Changes require ex
 spex/
 ├── packages/
 │   ├── cli/                    — spex binary (commander-based)
-│   ├── core/                   — discovery (static + adaptive architect agent + gap detection + universal navigation + state persistence), tech-spec, scaffold, context, feature-spec, implementation, bug-fix, git, logger
+│   ├── core/                   — discovery (adaptive architect agent + gap detection + universal navigation + state persistence), tech-spec, scaffold, context, feature-spec, implementation, bug-fix, git, logger
 │   ├── schemas/                — zod schemas (TechSpec, FeatureSpec, ImplementationPlan, …)
 │   ├── mcp-server/             — MCP server exposing SPEX tools over stdio (spex_*, list_skills, get_skill)
 │   ├── skills/                 — markdown skill bundles + loader (@spex/skills)

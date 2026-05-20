@@ -1,13 +1,10 @@
 export type { DiscoveryAnswers, DiscoveryAnswerValue, Question } from './questions.js';
-export { SPRINT_1_QUESTIONS } from './questions.js';
 export {
   DiscoveryPausedError,
   type DiscoveryResult,
   type NavigationOptions,
   type RunAdaptiveDiscoveryOptions,
-  type RunDiscoveryOptions,
   runAdaptiveDiscovery,
-  runDiscovery,
 } from './flow.js';
 export {
   type ArchitectAgent,

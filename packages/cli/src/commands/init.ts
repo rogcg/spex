@@ -3,16 +3,17 @@ import { confirm } from '@inquirer/prompts';
 import {
   AiFolderExistsError,
   AnthropicProvider,
-  INIT_DISCOVERY_QUESTIONS,
+  INIT_DESCRIPTION_QUESTION,
   INIT_INFERRED_FIELDS,
   MissingApiKeyError,
   ProjectInspectionError,
   UnsupportedStackError,
   assertAiFolderAbsent,
+  createArchitectAgent,
   detectStack,
   generateInitTechSpec,
   injectAiFolder,
-  runDiscovery,
+  runAdaptiveDiscovery,
   techSpecToYaml,
 } from '@spex/core';
 import { STRINGS } from '../strings.js';
@@ -81,14 +82,16 @@ export async function runInitCommand(options: RunInitCommandOptions = {}): Promi
   }
 
   console.log(STRINGS.initCommand.discoveryHeader);
-  const answers = await runDiscovery(INIT_DISCOVERY_QUESTIONS);
+  const discoveryResult = await runAdaptiveDiscovery({
+    agent: createArchitectAgent({ llm, seed: INIT_DESCRIPTION_QUESTION }),
+  });
 
   console.log(STRINGS.initCommand.generatingSpec);
   const spec = await generateInitTechSpec({
     llm,
     projectName: stack.packageName,
     stack,
-    answers,
+    answers: discoveryResult.answers,
   });
 
   console.log(STRINGS.initCommand.specReady);

@@ -13,12 +13,7 @@ import {
   SKIPPED_MARKER,
   askQuestionWithNav,
 } from './navigation.js';
-import {
-  type DiscoveryAnswerValue,
-  type DiscoveryAnswers,
-  type Question,
-  SPRINT_1_QUESTIONS,
-} from './questions.js';
+import type { DiscoveryAnswerValue, DiscoveryAnswers, Question } from './questions.js';
 import { type DiscoveryState, saveDiscoveryState } from './state.js';
 
 export interface DiscoveryResult {
@@ -30,10 +25,6 @@ export interface DiscoveryResult {
 export interface NavigationOptions {
   /** Path to write paused state to. If unset, the `/pause` command is disabled. */
   scratchPath?: string;
-}
-
-export interface RunDiscoveryOptions {
-  nav?: NavigationOptions;
 }
 
 export interface RunAdaptiveDiscoveryOptions {
@@ -58,16 +49,6 @@ export class DiscoveryPausedError extends SpexError {
     super(`Discovery paused. State saved to ${scratchPath}.`);
     this.scratchPath = scratchPath;
   }
-}
-
-export async function runDiscovery(
-  questions: readonly Question[] = SPRINT_1_QUESTIONS,
-  options: RunDiscoveryOptions = {},
-): Promise<DiscoveryAnswers> {
-  if (!options.nav) {
-    return runStaticBasic(questions);
-  }
-  return runStaticWithNav(questions, options.nav);
 }
 
 export async function runAdaptiveDiscovery(
@@ -112,59 +93,6 @@ export async function runAdaptiveDiscovery(
     return { answers, gap, override: { acceptedAt: new Date().toISOString() } };
   }
   return { answers, gap };
-}
-
-async function runStaticBasic(questions: readonly Question[]): Promise<DiscoveryAnswers> {
-  const answers: DiscoveryAnswers = {};
-  for (const question of questions) {
-    answers[question.id] = await askQuestion(question);
-  }
-  return answers;
-}
-
-async function runStaticWithNav(
-  questions: readonly Question[],
-  nav: NavigationOptions,
-): Promise<DiscoveryAnswers> {
-  const answers: DiscoveryAnswers = {};
-  const skipped = new Set<string>();
-  let index = 0;
-  while (index < questions.length) {
-    const q = questions[index];
-    if (!q) break;
-    const context: NavContext = {
-      canBack: index > 0,
-      canPause: nav.scratchPath !== undefined,
-    };
-    const result = await askQuestionWithNav(q, context);
-    if (result.type === 'answer') {
-      answers[q.id] = result.value;
-      skipped.delete(q.id);
-      index += 1;
-      continue;
-    }
-    switch (result.command) {
-      case 'why':
-        emitWhy(q);
-        break;
-      case 'skip':
-        skipped.add(q.id);
-        delete answers[q.id];
-        index += 1;
-        break;
-      case 'back':
-        index = Math.max(0, index - 1);
-        break;
-      case 'pause':
-        await persistStaticPause(nav, questions, answers, skipped, index);
-        // Unreachable: persistStaticPause throws DiscoveryPausedError on success.
-        return answers;
-      case 'help':
-        emitHelp(context);
-        break;
-    }
-  }
-  return answers;
 }
 
 async function handleAdaptiveStep(args: {
@@ -215,35 +143,6 @@ function collectAnswers(history: readonly DiscoveryHistoryEntry[]): DiscoveryAns
   return answers;
 }
 
-async function persistStaticPause(
-  nav: NavigationOptions,
-  questions: readonly Question[],
-  answers: DiscoveryAnswers,
-  skipped: Set<string>,
-  index: number,
-): Promise<void> {
-  const path = nav.scratchPath;
-  if (!path) throw new SpexError('Cannot pause: no scratchPath configured');
-  const history: DiscoveryState['history'] = [];
-  for (let i = 0; i < index; i += 1) {
-    const question = questions[i];
-    if (!question) continue;
-    if (skipped.has(question.id)) continue;
-    const answer = answers[question.id];
-    if (answer === undefined) continue;
-    history.push({ question: questionToState(question), answer });
-  }
-  const state: DiscoveryState = {
-    version: 1,
-    pausedAt: new Date().toISOString(),
-    source: 'static',
-    history,
-    skipped: [...skipped],
-  };
-  await saveDiscoveryState(path, state);
-  throw new DiscoveryPausedError(path);
-}
-
 async function persistAdaptivePause(
   nav: NavigationOptions,
   history: readonly DiscoveryHistoryEntry[],
@@ -281,7 +180,7 @@ function questionToState(question: Question): DiscoveryState['history'][number][
 function emitWhy(question: Question): void {
   const body = question.rationale
     ? question.rationale
-    : 'No rationale was provided for this question. (Static questions may not include one.)';
+    : 'No rationale was provided for this question.';
   process.stderr.write(`\n[why] ${body}\n\n`);
 }
 

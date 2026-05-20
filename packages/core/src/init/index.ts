@@ -5,10 +5,7 @@ export {
   type DetectedStack,
   type DetectionSignals,
 } from './detect-stack.js';
-export {
-  INIT_DISCOVERY_QUESTIONS,
-  INIT_DESCRIPTION_QUESTION,
-} from './questions.js';
+export { INIT_DESCRIPTION_QUESTION } from './questions.js';
 export {
   INIT_TECH_SPEC_SYSTEM_PROMPT,
   INIT_INFERRED_FIELDS,

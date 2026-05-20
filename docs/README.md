@@ -8,7 +8,7 @@ This directory holds the detailed documentation for SPEX. The top-level [`README
 |---|---|
 | [`cli-reference.md`](./cli-reference.md) | Every `spex` subcommand — arguments, flags, env vars, exit codes, examples. The entry point if you want to know what a command does. |
 | [`configuration.md`](./configuration.md) | Full `.ai/config.yaml` schema for every integration (GitHub, Linear, PostHog, Slack), including defaults and validation rules. |
-| [`discovery-and-techspec.md`](./discovery-and-techspec.md) | The discovery flow (static vs adaptive), the architect agent, the decision-gate engine for `spex new`, stack recommendation, scaffold planner / verifier / self-correction. |
+| [`discovery-and-techspec.md`](./discovery-and-techspec.md) | The adaptive discovery flow, the architect agent, the decision-gate engine for `spex new`, stack recommendation, scaffold planner / verifier / self-correction. |
 | [`audit-and-resume.md`](./audit-and-resume.md) | `.ai/scratch/` and `.ai/audit/` layout, workflow lifecycle, crash recovery, conflict resolution, audit event schema, secret redaction. |
 | [`github-workflows.md`](./github-workflows.md) | The three GitHub Actions templates installed by `spex github setup` — triggers, permissions, secrets, repo settings, and known caveats. |
 | [`mcp-integration.md`](./mcp-integration.md) | Wiring SPEX as an MCP server (stdio) for Claude Code, Cursor, and other MCP-aware IDEs. Documents all seven tools. |

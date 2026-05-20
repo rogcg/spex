@@ -52,4 +52,4 @@ The `spex_new` MCP tool exposes the same flow to Claude Code, Cursor, and other 
 
 - The user is shown the generated TechSpec before any scaffolding runs and must approve it. Reject → no files are written.
 - All user-facing strings shown by the CLI are centralised in `packages/cli/src/strings.ts` and may be reworded for i18n in the future.
-- The discovery flow used by `spex new` is the static 5-question flow. The adaptive architect-driven flow is available via the library API but is not yet wired into this command.
+- Discovery is fully adaptive — the architect agent drives the Q&A. See [[spex-discovery]] for navigation commands and gap detection.

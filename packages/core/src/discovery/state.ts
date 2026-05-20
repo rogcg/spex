@@ -22,7 +22,7 @@ const HistoryEntryStateSchema = z.object({
 export const DiscoveryStateSchema = z.object({
   version: z.literal(1),
   pausedAt: z.string().min(1),
-  source: z.enum(['static', 'adaptive']),
+  source: z.literal('adaptive'),
   history: z.array(HistoryEntryStateSchema),
   skipped: z.array(z.string()),
 });

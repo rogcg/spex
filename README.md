@@ -24,7 +24,7 @@ See [`CLAUDE.md`](./CLAUDE.md) for the architectural decisions and code conventi
 |---|---|
 | [`docs/cli-reference.md`](./docs/cli-reference.md) | Every `spex` subcommand — arguments, flags, env vars, exit codes, examples. |
 | [`docs/configuration.md`](./docs/configuration.md) | Full `.ai/config.yaml` schema for every integration (GitHub, Linear, PostHog, Slack), including defaults and validation rules. |
-| [`docs/discovery-and-techspec.md`](./docs/discovery-and-techspec.md) | The discovery flow (static vs adaptive), the decision-gate engine, stack recommendation, scaffold planner / verifier / self-correction. |
+| [`docs/discovery-and-techspec.md`](./docs/discovery-and-techspec.md) | The adaptive discovery flow, the decision-gate engine, stack recommendation, scaffold planner / verifier / self-correction. |
 | [`docs/audit-and-resume.md`](./docs/audit-and-resume.md) | `.ai/scratch/` and `.ai/audit/` layout, workflow lifecycle, crash recovery, conflict resolution, audit event schema, secret redaction. |
 | [`docs/github-workflows.md`](./docs/github-workflows.md) | The GitHub Actions templates installed by `spex github setup`. |
 | [`docs/mcp-integration.md`](./docs/mcp-integration.md) | Wiring SPEX as an MCP server for Claude Code / Cursor. |
@@ -91,7 +91,7 @@ Optional flags:
 - `--strict` — with `--auto`, abort the run on any decision flagged `confidence: low` instead of accepting it.
 - `--resume` — continue a previously paused proposal from `.<projectName>-spex-proposal.yaml` next to the parent dir.
 
-1. Run discovery — a static 5-question flow by default. An adaptive architect-driven flow is also available via the library API; see [Adaptive discovery](#adaptive-discovery) below.
+1. Run **adaptive discovery** — an architect agent asks one question at a time, each informed by the previous answers, until it judges the project profile complete. See [Adaptive discovery](#adaptive-discovery) below.
 2. Select a stack: the AI recommends best-fit stacks from the discovery profile (or honors `--stack` / `--constraints`). No hardcoded catalog — recommendations are reasoned per-profile and ranked with confidence + tradeoffs. The committed decision records its source (`recommended | user | brainstormed`) in the tech-spec.
 3. Draft the tech spec as a sequence of small **decisions** (10–14 of them, covering project identity, context fields, per-component stack rationale, and the overall rationale). For each decision the user can `[a]ccept`, `[r]eject` (the AI revises), `[d]ebate` (the AI defends or refines as prose), `[e]xplore` alternatives (the AI lists 2–3), `[m]odify` directly, or `[p]ause` (state saved to scratch, resume with `--resume`). Every decision — original AI proposal, final resolved value, and any user note — is logged to `.ai/audit/decisions-<timestamp>.jsonl` (append-only JSONL).
 4. Assemble the tech spec from the approved decisions, show it, and ask for approval.
@@ -280,7 +280,7 @@ Full Skills overview — the format, the loader, how to author new skills: see [
 
 ## Adaptive discovery
 
-The discovery flow used by `spex new` and `spex init` is, by default, a static 5-question script. A richer **architect-driven adaptive** flow is also available via the library API:
+Discovery in `spex new` and `spex init` is fully adaptive — an architect agent asks one question at a time, each informed by all prior answers, with no fixed script. The same flow is also exposed via the library API:
 
 ```ts
 import { AnthropicProvider, createArchitectAgent, runAdaptiveDiscovery } from '@spex/core';
@@ -296,9 +296,9 @@ console.log(result.answers); // DiscoveryAnswers keyed by question id
 console.log(result.gap);     // GapAssessment from the architect
 ```
 
-The architect agent asks one question at a time, with each question informed by all prior answers. Four question types are supported: free-form input, single-select, multi-select, and yes/no confirm. At the end of the interview the architect classifies the discovery as `complete`, `nice_to_have_missing`, or `critical_missing` — on critical, the user is prompted to confirm before the flow returns.
+Four question types are supported: free-form input, single-select, multi-select, and yes/no confirm. At the end of the interview the architect classifies the discovery as `complete`, `nice_to_have_missing`, or `critical_missing` — on critical, the user is prompted to confirm before the flow returns.
 
-**Universal navigation** during any flow (static or adaptive):
+**Universal navigation**:
 
 | Command | Effect |
 |---|---|
@@ -307,8 +307,6 @@ The architect agent asks one question at a time, with each question informed by 
 | `/back` | Return to the previous question; can re-answer. |
 | `/pause` | Save state to `.ai/scratch/discovery.yaml` and exit (throws `DiscoveryPausedError`). |
 | `/?` (alias `/help`) | Show available commands. |
-
-The CLI commands (`spex new`, `spex init`) are not yet wired to `runAdaptiveDiscovery` — the library API is the entry point.
 
 ## Optional integrations
 
@@ -532,7 +530,7 @@ Cross-package tests in `@spex/core` resolve `@spex/schemas` through its built
 ```
 packages/
   schemas/       — zod schemas: TechSpec, FeatureSpec, ImplementationPlan, … (@spex/schemas)
-  core/          — LLM, discovery (static + adaptive architect agent + gap detection
+  core/          — LLM, discovery (adaptive architect agent + gap detection
                    + universal navigation + YAML state persistence), tech-spec, scaffold,
                    init, context, feature-spec, implementation (planner/executor),
                    bug-fix, git, logger (@spex/core)

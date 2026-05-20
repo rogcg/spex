@@ -42,7 +42,7 @@ For an existing project:
 spex init
 ```
 
-(Both commands use a static question set by default. The adaptive architect-driven flow is exposed via the library API and is not yet wired into the CLI commands above.)
+Both commands run the architect-driven adaptive flow described above — there is no static question script.
 
 ### Via the importable library
 
