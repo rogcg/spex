@@ -110,7 +110,7 @@ The install is **idempotent**. Re-running overwrites the existing skill files wi
 
 Any MCP-aware client (Claude Code, Cursor, others) can pull skills at runtime via the SPEX MCP server. No install step required.
 
-The server exposes two skill tools alongside the engine tools:
+The server exposes two skill tools alongside the five engine tools (`spex_new`, `spex_implement`, `spex_fix`, `spex_review`, `spex_resume`) for a total surface of seven tools:
 
 | Tool | Input | Output |
 |---|---|---|
@@ -175,5 +175,7 @@ The default `rootDir` resolves to `packages/skills/` (one level up from the buil
 ## Related docs
 
 - [`docs/mcp-integration.md`](./mcp-integration.md) — connecting Claude Code / Cursor to the SPEX MCP server, including the skill tools.
+- [`docs/cli-reference.md`](./cli-reference.md#spex-skills-install) — the `spex skills install` CLI surface.
+- [`docs/discovery-and-techspec.md`](./discovery-and-techspec.md) — what the `spex-discovery` skill routes into.
 - [`CHANGELOG.md`](../CHANGELOG.md) — release notes; the v0.9.0 entry introduces the Skills foundation.
 - [`packages/skills/spex-discovery/SKILL.md`](../packages/skills/spex-discovery/SKILL.md) — the first end-to-end skill.

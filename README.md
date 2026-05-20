@@ -10,6 +10,18 @@
 
 See [`CLAUDE.md`](./CLAUDE.md) for the architectural decisions and code conventions, and [`CHANGELOG.md`](./CHANGELOG.md) for the per-release diff.
 
+## Detailed docs
+
+| Doc | What it covers |
+|---|---|
+| [`docs/cli-reference.md`](./docs/cli-reference.md) | Every `spex` subcommand — arguments, flags, env vars, exit codes, examples. |
+| [`docs/configuration.md`](./docs/configuration.md) | Full `.ai/config.yaml` schema for every integration (GitHub, Linear, PostHog, Slack), including defaults and validation rules. |
+| [`docs/discovery-and-techspec.md`](./docs/discovery-and-techspec.md) | The discovery flow (static vs adaptive), the decision-gate engine, stack recommendation, scaffold planner / verifier / self-correction. |
+| [`docs/audit-and-resume.md`](./docs/audit-and-resume.md) | `.ai/scratch/` and `.ai/audit/` layout, workflow lifecycle, crash recovery, conflict resolution, audit event schema, secret redaction. |
+| [`docs/github-workflows.md`](./docs/github-workflows.md) | The GitHub Actions templates installed by `spex github setup`. |
+| [`docs/mcp-integration.md`](./docs/mcp-integration.md) | Wiring SPEX as an MCP server for Claude Code / Cursor. |
+| [`docs/skills.md`](./docs/skills.md) | The agent-facing skills library — format, install, authoring guide. |
+
 ## Requirements
 
 - Node.js 20 LTS or newer
@@ -133,12 +145,15 @@ cd my-saas
 node /path/to/spex/packages/cli/dist/index.js github setup
 ```
 
-Writes two workflows to `.github/workflows/`:
+Writes three workflows to `.github/workflows/`:
 
 - `pr-review.yml` — auto-review every newly opened PR.
 - `implement-from-issue.yml` — when an issue is labelled `spex:implement`, SPEX implements it on a branch and opens a PR.
+- `linear-sync.yml` — sync PR lifecycle events (opened → `In Review`, merged → `Done`, closed-unmerged → `Todo` + comment) to the linked Linear issue.
 
-Both workflows install SPEX from this repo via `actions/checkout` + `pnpm install` + `pnpm -r build` until SPEX is published to npm. The `SPEX_REPO` and `SPEX_REF` env vars at the top of each template let you pin a tag or a fork. The workflows require repo secrets `ANTHROPIC_API_KEY` (the default `GITHUB_TOKEN` provided by Actions is sufficient for the rest).
+All workflows install SPEX from this repo via `actions/checkout` + `pnpm install` + `pnpm -r build` until SPEX is published to npm. The `SPEX_REPO` and `SPEX_REF` env vars at the top of each template let you pin a tag or a fork. They require repo secrets `ANTHROPIC_API_KEY` (used by `pr-review.yml` and `implement-from-issue.yml`) and `LINEAR_API_KEY` (used by `linear-sync.yml`). The default `GITHUB_TOKEN` provided by Actions is sufficient for the rest.
+
+See [`docs/github-workflows.md`](./docs/github-workflows.md) for the full template reference, required repo settings, and known caveats.
 
 ### Resume a paused or interrupted workflow — `spex resume`
 
@@ -494,10 +509,12 @@ packages/
                    + universal navigation + YAML state persistence), tech-spec, scaffold,
                    init, context, feature-spec, implementation (planner/executor),
                    bug-fix, git, logger (@spex/core)
-  cli/           — spex binary with new, init, implement, fix, review, skills install,
-                   linear-sync, posthog-webhook, slack-webhook, mcp-server commands (@spex/cli)
-  mcp-server/    — MCP server (stdio) exposing six tools: spex_new, spex_implement,
-                   spex_fix, spex_review, list_skills, get_skill (@spex/mcp-server)
+  cli/           — spex binary with new, init, implement, fix, review, resume, logs,
+                   skills install, github setup, linear-sync, posthog-webhook,
+                   slack-webhook, mcp-server commands (@spex/cli)
+  mcp-server/    — MCP server (stdio) exposing seven tools: spex_new, spex_implement,
+                   spex_fix, spex_review, spex_resume, list_skills, get_skill
+                   (@spex/mcp-server)
   skills/        — markdown skill bundles + loader; six routing skills (spex-new, init,
                    discovery, implement, fix, review) and three prompt-only skills
                    (brainstorm, architecture-decision, adversarial-review) (@spex/skills)
