@@ -1,8 +1,7 @@
 # SPEX MCP integration
 
 This guide explains how to expose SPEX to MCP-compatible IDEs (Claude Code,
-Cursor, …) so the IDE's LLM can invoke `spex_new` and `spex_implement`
-directly.
+Cursor, …) so the IDE's LLM can invoke SPEX workflows directly.
 
 SPEX speaks the [Model Context Protocol](https://modelcontextprotocol.io/) over
 the **stdio transport**. HTTP/SSE transports are planned.
@@ -11,12 +10,28 @@ the **stdio transport**. HTTP/SSE transports are planned.
 
 ## What you get
 
-Once configured, the IDE sees two tools:
+Once configured, the IDE sees six tools.
+
+### Engine tools
 
 | Tool | Purpose |
 |---|---|
 | `spex_new` | Create a new SPEX-managed Next.js + TypeScript + Tailwind project. Takes the same discovery answers as `spex new`. Non-interactive: all answers in one call. |
 | `spex_implement` | Implement a single feature inside an existing SPEX project (must contain `.ai/`). Runs the full context → spec → plan → execute → commit pipeline non-interactively. |
+| `spex_fix` | Diagnose and fix a bug in an existing SPEX project. Runs the full 6-phase pipeline (hypotheses → root cause → fix proposal → regression test → verify) non-interactively. Optionally sources the bug from PostHog. |
+| `spex_review` | Review a GitHub PR against its linked feature spec and project conventions. Returns a structured review + rendered Markdown comment. Optionally posts to the PR. |
+
+### Skills tools
+
+| Tool | Purpose |
+|---|---|
+| `list_skills` | List the SPEX skill bundles available on this server. Returns each skill's manifest (name, description, optional allowed-tools). Empty input. |
+| `get_skill` | Fetch a single skill by name. Returns the manifest plus the full `SKILL.md` markdown body. Input: `{ "name": "<kebab-case-name>" }`. |
+
+Skills are markdown bundles that instruct the agent how to invoke SPEX
+workflows (routing skills) or how to apply a methodology like brainstorming
+or adversarial review (prompt-only skills). See [`docs/skills.md`](./skills.md)
+for the full library and authoring guide.
 
 The IDE's LLM is responsible for gathering parameters from the user via chat
 and assembling a single tool call. SPEX never re-prompts during a tool
@@ -121,7 +136,8 @@ claude mcp add spex --command spex --args mcp-server
 
 After editing the config, restart Claude Code. Open a new conversation and
 ask the assistant something like "list the spex tools" — it should report
-`spex_new` and `spex_implement`.
+all six: `spex_new`, `spex_implement`, `spex_fix`, `spex_review`,
+`list_skills`, and `get_skill`.
 
 For the most up-to-date Claude Code MCP setup details, see the official docs:
 <https://docs.claude.com/en/docs/claude-code/mcp>.
@@ -149,7 +165,8 @@ the same as Claude Code:
 ```
 
 Restart Cursor after editing. In a new chat, the agent's tool list should
-include `spex_new` and `spex_implement`.
+include all six SPEX tools: `spex_new`, `spex_implement`, `spex_fix`,
+`spex_review`, `list_skills`, and `get_skill`.
 
 ---
 

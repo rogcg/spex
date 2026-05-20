@@ -43,7 +43,7 @@ To pin to a specific release, check out a tag before building (e.g. `git checkou
 ANTHROPIC_API_KEY=sk-... node packages/cli/dist/index.js new my-saas
 ```
 
-1. Ask 5 discovery questions about the project.
+1. Run discovery (static 5-question flow by default in v0.9.0; the adaptive architect-driven flow is available via the library API — see "Adaptive discovery" below).
 2. Generate a `tech-spec.yaml` via Claude.
 3. Show the spec and ask for approval.
 4. Scaffold a Next.js application via `create-next-app`.
@@ -129,6 +129,49 @@ Writes two workflows to `.github/workflows/`:
 - `implement-from-issue.yml` — when an issue is labelled `spex:implement`, SPEX implements it on a branch and opens a PR.
 
 Both workflows install SPEX from this repo via `actions/checkout` + `pnpm install` + `pnpm -r build` until SPEX is published to npm. The `SPEX_REPO` and `SPEX_REF` env vars at the top of each template let you pin a tag or a fork. The workflows require repo secrets `ANTHROPIC_API_KEY` (the default `GITHUB_TOKEN` provided by Actions is sufficient for the rest).
+
+### Install Claude Code skills — `spex skills install`
+
+```bash
+spex skills install                 # default: user scope (~/.claude/skills/)
+spex skills install --scope=project # project scope (./.claude/skills/)
+```
+
+Copies the SPEX skill bundles into a Claude Code skills directory so the IDE's agent can invoke SPEX workflows by name (`spex-new`, `spex-implement`, `spex-fix`, `spex-review`, `spex-discovery`, `spex-brainstorm`, `spex-architecture-decision`, `spex-adversarial-review`, …). Idempotent — re-running overwrites in place.
+
+Full Skills overview, including the format, the shipped library, and how to author new skills: see [`docs/skills.md`](./docs/skills.md).
+
+## Adaptive discovery
+
+The discovery flow used by `spex new` and `spex init` is, by default, the static Sprint 1 5-question script. From v0.9.0 a richer **architect-driven adaptive** flow is also available via the library API:
+
+```ts
+import { AnthropicProvider, createArchitectAgent, runAdaptiveDiscovery } from '@spex/core';
+
+const llm = new AnthropicProvider();
+const agent = createArchitectAgent({ llm });
+const result = await runAdaptiveDiscovery({
+  agent,
+  nav: { scratchPath: '.ai/scratch/discovery.yaml' },
+});
+
+console.log(result.answers); // DiscoveryAnswers keyed by question id
+console.log(result.gap);     // GapAssessment from the architect
+```
+
+The architect agent asks one question at a time, with each question informed by all prior answers. Four question types are supported: free-form input, single-select, multi-select, and yes/no confirm. At the end of the interview the architect classifies the discovery as `complete`, `nice_to_have_missing`, or `critical_missing` — on critical, the user is prompted to confirm before the flow returns.
+
+**Universal navigation** during any flow (static or adaptive):
+
+| Command | Effect |
+|---|---|
+| `/why` | Show the rationale for the current question. |
+| `/skip` | Skip the current question (excluded from final answers). |
+| `/back` | Return to the previous question; can re-answer. |
+| `/pause` | Save state to `.ai/scratch/discovery.yaml` and exit (throws `DiscoveryPausedError`). |
+| `/?` (alias `/help`) | Show available commands. |
+
+The CLI commands (`spex new`, `spex init`) will be wired to `runAdaptiveDiscovery` in a follow-up sprint; the library API is the entry point for now.
 
 ## Optional integrations
 
@@ -305,8 +348,10 @@ app install to confirm scopes + channel access in under 5 seconds.
 
 Expose SPEX as tools to Claude Code, Cursor, and other MCP-compatible IDEs.
 The server speaks the [Model Context Protocol](https://modelcontextprotocol.io/)
-over stdio and registers tools (`spex_new`, `spex_implement`, `spex_fix`, …)
-that the IDE's LLM can call directly.
+over stdio and registers six tools that the IDE's LLM can call directly:
+
+- `spex_new`, `spex_implement`, `spex_fix`, `spex_review` — the four engine tools.
+- `list_skills`, `get_skill` — pull the SPEX skill bundles at runtime (see [`docs/skills.md`](./docs/skills.md)).
 
 ```bash
 spex mcp-server                # default: stdio transport, logs to stderr
@@ -349,11 +394,17 @@ Cross-package tests in `@spex/core` resolve `@spex/schemas` through its built
 ```
 packages/
   schemas/       — zod schemas: TechSpec, FeatureSpec, ImplementationPlan, … (@spex/schemas)
-  core/          — LLM, discovery, tech-spec, scaffold, init, context, feature-spec,
-                   implementation (planner/executor), bug-fix, git, logger (@spex/core)
-  cli/           — spex binary with new, init, implement, fix, review,
+  core/          — LLM, discovery (static + adaptive architect agent + gap detection
+                   + universal navigation + YAML state persistence), tech-spec, scaffold,
+                   init, context, feature-spec, implementation (planner/executor),
+                   bug-fix, git, logger (@spex/core)
+  cli/           — spex binary with new, init, implement, fix, review, skills install,
                    linear-sync, posthog-webhook, slack-webhook, mcp-server commands (@spex/cli)
-  mcp-server/    — MCP server (stdio) exposing SPEX tools (@spex/mcp-server)
+  mcp-server/    — MCP server (stdio) exposing six tools: spex_new, spex_implement,
+                   spex_fix, spex_review, list_skills, get_skill (@spex/mcp-server)
+  skills/        — markdown skill bundles + loader; six routing skills (spex-new, init,
+                   discovery, implement, fix, review) and three prompt-only skills
+                   (brainstorm, architecture-decision, adversarial-review) (@spex/skills)
   integrations/
     github/      — GitHub PR/branch/review operations (@spex/integrations-github)
     linear/      — Linear MCP client + issue/PR sync (@spex/integrations-linear)
