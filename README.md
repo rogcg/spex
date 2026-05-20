@@ -6,7 +6,7 @@
 
 > AI agent orchestration framework for software development, based on versioned specs and human approval gates.
 
-> ⚠️ **Active development.** SPEX is open for use; APIs are stabilised at `1.0.0` and minor releases will be backwards-compatible. Expect rough edges in flows that still depend on external services (Linear, PostHog, Slack). Pin to a specific version if you want strict reproducibility.
+> 🚧 **Work in progress — not production ready.** SPEX is an early-stage experimental project. It is **not** ready for production use or real-life applications. APIs may change without warning, flows that depend on external services (Linear, PostHog, Slack) have rough edges, and there is no support guarantee. Use it to explore the ideas, hack on it, give feedback — not to run anything you care about. Pin to a specific tag if you want any kind of reproducibility.
 
 See [`CLAUDE.md`](./CLAUDE.md) for the architectural decisions and code conventions, and [`CHANGELOG.md`](./CHANGELOG.md) for the per-release diff.
 
@@ -27,7 +27,26 @@ See [`CLAUDE.md`](./CLAUDE.md) for the architectural decisions and code conventi
 - Node.js 20 LTS or newer
 - pnpm 9 or newer
 - An `ANTHROPIC_API_KEY` set in your environment (see `.env.example`)
-- A `GITHUB_TOKEN` if you want SPEX to push branches / open PRs / post review comments
+
+### Environment variables
+
+`ANTHROPIC_API_KEY` is the only one every command needs. Everything else is opt-in per integration / command — set them only when you use the corresponding flow.
+
+| Env var | Required for |
+|---|---|
+| `ANTHROPIC_API_KEY` | **Always.** Every LLM call: `spex new`, `init`, `implement`, `fix`, `review`, and the MCP server tools. |
+| `GITHUB_TOKEN` | `spex review`, `spex github pr`, and any flow that pushes a branch / opens a PR / posts a review comment. Inside GitHub Actions the default `GITHUB_TOKEN` is sufficient. |
+| `LINEAR_API_KEY` | `spex linear-sync`, and `spex implement --from-issue <ISSUE-ID>`. Get one at [linear.app/settings/api](https://linear.app/settings/api). |
+| `POSTHOG_API_KEY` | `spex fix --from-error=posthog:<ISSUE-ID>` and the `spex posthog-webhook` receiver. Use a personal API key with the **MCP Server** preset. |
+| `POSTHOG_PROJECT_ID` | Together with `POSTHOG_API_KEY` to scope PostHog MCP calls when the key has access to multiple projects. |
+| `POSTHOG_WEBHOOK_SECRET` | Production `spex posthog-webhook` — signature verification. Skipped (with a warning) if unset. |
+| `SLACK_BOT_TOKEN` | Slack integration: notifications, async approval gates, slash commands. `xoxb-…` token with `chat:write` (+ `commands` for slash commands). |
+| `SLACK_SIGNING_SECRET` | `spex slack-webhook` — HMAC verification of incoming Slack deliveries (5-minute replay window). |
+| `SLACK_TOKEN_STORAGE_KEY` | AES-256-GCM key (64 hex chars) for the encrypted on-disk Slack workspace token store. Generate with `openssl rand -hex 32`. |
+
+Optional internal knobs: `SPEX_LOG_LEVEL` (default `info`), `SPEX_LOG_DEST` (default stderr; supports `file:<path>`).
+
+Full per-integration setup, OAuth scopes, and config schema: see [`docs/configuration.md`](./docs/configuration.md).
 
 ## Install from GitHub
 
