@@ -175,5 +175,5 @@ The default `rootDir` resolves to `packages/skills/` (one level up from the buil
 ## Related docs
 
 - [`docs/mcp-integration.md`](./mcp-integration.md) — connecting Claude Code / Cursor to the SPEX MCP server, including the skill tools.
-- [`CHANGELOG.md`](../CHANGELOG.md) — the v0.9.0 entry introduces the Skills foundation.
+- [`CHANGELOG.md`](../CHANGELOG.md) — release notes; the v0.9.0 entry introduces the Skills foundation.
 - [`packages/skills/spex-discovery/SKILL.md`](../packages/skills/spex-discovery/SKILL.md) — the first end-to-end skill.

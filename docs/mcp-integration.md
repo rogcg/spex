@@ -16,7 +16,7 @@ Once configured, the IDE sees six tools.
 
 | Tool | Purpose |
 |---|---|
-| `spex_new` | Create a new SPEX-managed Next.js + TypeScript + Tailwind project. Takes the same discovery answers as `spex new`. Non-interactive: all answers in one call. |
+| `spex_new` | Create a new SPEX-managed project. The AI recommends a best-fit stack from the supplied discovery answers (or honors an optional `stack` argument for an explicit choice), plans the scaffold dynamically, executes it with a verification + self-correction loop, and writes `.ai/`. Non-interactive: all answers in one call. |
 | `spex_implement` | Implement a single feature inside an existing SPEX project (must contain `.ai/`). Runs the full context → spec → plan → execute → commit pipeline non-interactively. |
 | `spex_fix` | Diagnose and fix a bug in an existing SPEX project. Runs the full 6-phase pipeline (hypotheses → root cause → fix proposal → regression test → verify) non-interactively. Optionally sources the bug from PostHog. |
 | `spex_review` | Review a GitHub PR against its linked feature spec and project conventions. Returns a structured review + rendered Markdown comment. Optionally posts to the PR. |
