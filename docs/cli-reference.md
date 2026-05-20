@@ -1,3 +1,10 @@
+---
+title: CLI reference
+layout: default
+nav_order: 2
+description: "Every spex subcommand — arguments, flags, env vars, exit codes, examples."
+---
+
 # SPEX CLI reference
 
 This page lists every `spex` subcommand: its arguments, flags, environment

@@ -1,3 +1,10 @@
+---
+title: Discovery & tech spec
+layout: default
+nav_order: 4
+description: "The discovery flow, decision-gate engine, stack recommendation, and scaffold planner / verifier / self-correction."
+---
+
 # Discovery, decision gates, stack selection, scaffold
 
 This page is the in-depth reference for the front half of `spex new` and `spex init` — everything between "I want a project called X" and the moment the scaffolder starts running commands.

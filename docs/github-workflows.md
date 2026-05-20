@@ -1,3 +1,10 @@
+---
+title: GitHub workflows
+layout: default
+nav_order: 6
+description: "The three GitHub Actions templates installed by spex github setup."
+---
+
 # GitHub Actions workflow templates
 
 `spex github setup` installs three workflow templates into `.github/workflows/`. Each is a self-contained YAML file that clones SPEX from this repo, builds it, and runs the relevant subcommand against the event payload.

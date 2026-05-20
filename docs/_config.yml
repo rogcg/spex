@@ -1,0 +1,74 @@
+title: SPEX
+description: >-
+  Spec-driven Programming EXecutor — AI agent orchestration framework for
+  software development, built on versioned specs and human approval gates.
+url: https://rogcg.github.io
+baseurl: /spex
+repository: rogcg/spex
+
+remote_theme: just-the-docs/just-the-docs
+
+permalink: pretty
+
+color_scheme: dark
+search_enabled: true
+heading_anchors: true
+
+aux_links:
+  "GitHub repo":
+    - "https://github.com/rogcg/spex"
+  "Changelog":
+    - "https://github.com/rogcg/spex/blob/main/CHANGELOG.md"
+aux_links_new_tab: true
+
+footer_content: >-
+  SPEX is MIT-licensed. Source on
+  <a href="https://github.com/rogcg/spex">GitHub</a>.
+
+back_to_top: true
+back_to_top_text: "Back to top"
+
+ga_tracking:
+ga_tracking_anonymize_ip: true
+
+callouts_level: quiet
+callouts:
+  warning:
+    title: Warning
+    color: red
+  tip:
+    title: Tip
+    color: green
+  note:
+    title: Note
+    color: blue
+
+mermaid:
+  version: "10.9.1"
+
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
+  - jekyll-relative-links
+  - jekyll-default-layout
+  - jekyll-titles-from-headings
+
+relative_links:
+  enabled: true
+  collections: true
+
+defaults:
+  - scope:
+      path: ""
+      type: pages
+    values:
+      layout: default
+
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - vendor/
+  - .bundle/
+  - .jekyll-cache/
+  - node_modules/

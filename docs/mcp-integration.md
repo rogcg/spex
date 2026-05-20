@@ -1,3 +1,10 @@
+---
+title: MCP integration
+layout: default
+nav_order: 7
+description: "Wiring SPEX as an MCP server for Claude Code, Cursor, and other MCP-aware IDEs."
+---
+
 # SPEX MCP integration
 
 This guide explains how to expose SPEX to MCP-compatible IDEs (Claude Code,

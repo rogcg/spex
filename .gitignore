@@ -44,3 +44,10 @@ out/
 # Misc
 *.tgz
 .turbo/
+
+# Jekyll (docs site)
+docs/_site/
+docs/.jekyll-cache/
+docs/.bundle/
+docs/vendor/
+docs/Gemfile.lock

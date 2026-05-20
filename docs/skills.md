@@ -1,3 +1,10 @@
+---
+title: Skills
+layout: default
+nav_order: 8
+description: "The agent-facing skill bundle library — format, install routes, MCP list_skills / get_skill flow, authoring guide."
+---
+
 # SPEX Skills
 
 SPEX ships a library of **agent-facing skills** — markdown bundles that tell an AI agent (Claude Code, Cursor, or any MCP-aware client) how to invoke SPEX's workflows and how to follow a few methodologies that aren't backed by code.

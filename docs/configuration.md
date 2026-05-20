@@ -1,3 +1,10 @@
+---
+title: Configuration
+layout: default
+nav_order: 3
+description: "Full .ai/config.yaml schema for every SPEX integration (GitHub, Linear, PostHog, Slack)."
+---
+
 # `.ai/config.yaml` reference
 
 `.ai/config.yaml` is the opt-in configuration file for SPEX integrations. None of `spex new`, `spex implement`, `spex fix`, or `spex review` need it to operate against a plain local repo — it layers on top to wire GitHub, Linear, PostHog, and Slack.

@@ -1,3 +1,10 @@
+---
+title: Audit & resume
+layout: default
+nav_order: 5
+description: ".ai/scratch/ and .ai/audit/ layout, workflow lifecycle, crash recovery, conflict resolution, audit event schema."
+---
+
 # Scratch state, audit log, and resume
 
 SPEX records every long-running operation in two on-disk locations under the project root:
