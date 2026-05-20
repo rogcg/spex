@@ -553,6 +553,72 @@ export const STRINGS = {
       `Error: invalid scope "${raw}". Use --scope=user or --scope=project.`,
   },
 
+  resumeCommand: {
+    description: 'Resume a paused or interrupted SPEX workflow from .ai/scratch/',
+    workflowIdArgDescription: 'workflow id to resume (omit to choose interactively)',
+    listFlagDescription: 'list known workflows without resuming',
+    abandonFlagDescription: 'abandon a workflow by id (deletes its scratch state)',
+
+    noWorkflows:
+      'No workflows found in .ai/scratch/workflows/. Start one with `spex new`, `spex implement`, or `spex fix`.',
+    noActiveWorkflows:
+      'No active workflows to resume. All known workflows are in a terminal state:',
+    notFound: (id: string) =>
+      `No workflow found with id "${id}". Run \`spex resume --list\` to see available workflows.`,
+    header: '\n=== SPEX workflows ===',
+    listEntry: (s: {
+      workflowId: string;
+      kind: string;
+      status: string;
+      lastActivityAt: string;
+      description?: string;
+    }) =>
+      `  [${s.kind}] ${s.workflowId}\n    status: ${s.status}\n    last activity: ${s.lastActivityAt}${s.description ? `\n    note: ${s.description}` : ''}`,
+    pickPrompt: 'Pick a workflow to resume:',
+    confirmResumeOne: (id: string, kind: string) => `Resume workflow ${id} (${kind})?`,
+    cancelled: 'Cancelled.',
+    resumingHeader: (id: string, kind: string) => `\nResuming ${kind} workflow: ${id}`,
+    resumeNotice: (kind: string) =>
+      kind === 'proposal'
+        ? '  Re-run `spex new <name> --resume` from the project directory to continue the proposal flow.'
+        : kind === 'implementation'
+          ? '  Re-run `spex implement` from the project directory — the planner will pick up the saved state.'
+          : kind === 'fix'
+            ? '  Re-run `spex fix` from the project directory — the fix flow will resume from its last checkpoint.'
+            : '  Re-run the originating command from the project directory to continue.',
+    abandoned: (id: string) => `\nWorkflow "${id}" abandoned and removed from .ai/scratch/.`,
+  },
+
+  logsCommand: {
+    description: 'Query the SPEX audit log',
+    workflowFlagDescription: 'restrict to a single workflow id',
+    sinceFlagDescription: 'only show events newer than this duration (e.g. 1h, 2d, 30m)',
+    typeFlagDescription:
+      'filter by event type (llm_call | decision | file_write | file_read | git_operation | tool_invocation | approval | error | state_transition)',
+    actorFlagDescription: 'filter by actor (user | agent | system)',
+    formatFlagDescription: 'output format: table (default) | json | summary',
+    exportFlagDescription: 'write filtered events as JSON to this path',
+    tailFlagDescription:
+      'render what is currently in the log file; live follow is not yet implemented',
+    limitFlagDescription: 'maximum number of events to render (default 100)',
+
+    noEvents: '(no events match the filters)',
+    tableHeader: 'timestamp                 actor    type                workflow',
+    summaryHeader: (count: number) => `\n=== Audit summary (${count} event(s)) ===`,
+    summaryActorsHeader: '  by actor:',
+    exported: (path: string, count: number) => `\nWrote ${count} event(s) to ${path}`,
+    tailNoticeNotImplemented:
+      '\n(--tail follow mode is not yet implemented — the above is the current snapshot.)',
+    invalidSince: (raw: string) =>
+      `Error: --since "${raw}" is invalid. Use a number + unit (s, m, h, d, w) — e.g. --since=1h or --since=2d.`,
+    invalidType: (raw: string, allowed: readonly string[]) =>
+      `Error: --type "${raw}" is invalid. Allowed: ${allowed.join(', ')}.`,
+    invalidActor: (raw: string, allowed: readonly string[]) =>
+      `Error: --actor "${raw}" is invalid. Allowed: ${allowed.join(', ')}.`,
+    invalidFormat: (raw: string) =>
+      `Error: --format "${raw}" is invalid. Use table, json, or summary.`,
+  },
+
   errors: {
     missingApiKey: (envVar: string) =>
       `Error: ${envVar} is not set. Set it in your environment or a .env file before running spex new.`,

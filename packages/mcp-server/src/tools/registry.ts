@@ -5,6 +5,7 @@ import { listSkillsToolDefinition } from './list-skills.js';
 import { spexFixToolDefinition } from './spex-fix.js';
 import { spexImplementToolDefinition } from './spex-implement.js';
 import { spexNewToolDefinition } from './spex-new.js';
+import { spexResumeToolDefinition } from './spex-resume.js';
 import { spexReviewToolDefinition } from './spex-review.js';
 import { type ToolDefinition, type ToolDependencies, errorResult } from './types.js';
 
@@ -13,6 +14,7 @@ export const ALL_TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   spexImplementToolDefinition,
   spexFixToolDefinition,
   spexReviewToolDefinition,
+  spexResumeToolDefinition,
   listSkillsToolDefinition,
   getSkillToolDefinition,
 ];

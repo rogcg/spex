@@ -53,6 +53,7 @@ describe('startMcpServer (via InMemoryTransport)', () => {
       'spex_fix',
       'spex_implement',
       'spex_new',
+      'spex_resume',
       'spex_review',
     ]);
 

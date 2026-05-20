@@ -15,3 +15,6 @@ export * from './bug-context/index.js';
 export * from './bug-fix/index.js';
 export * from './config/index.js';
 export * from './review/index.js';
+export * from './state/index.js';
+export * from './audit/index.js';
+export * from './recovery/index.js';

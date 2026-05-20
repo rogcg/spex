@@ -1,6 +1,6 @@
 {
   "name": "@spex/integrations-slack",
-  "version": "0.11.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Slack integration for SPEX — outbound notifications, async approvals via interactive buttons, and slash commands (/spex review, /spex implement, /spex status)",
   "license": "MIT",
@@ -22,7 +22,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "test": "vitest run --passWithNoTests",

@@ -1,6 +1,6 @@
 {
   "name": "@spex/integrations-github",
-  "version": "0.11.0",
+  "version": "1.0.0",
   "private": true,
   "description": "GitHub integration for SPEX — Octokit client + PR/branch/issue operations",
   "license": "MIT",
@@ -22,7 +22,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "test": "vitest run --passWithNoTests",

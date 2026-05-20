@@ -24,6 +24,11 @@ export {
   type SpexReviewInput,
 } from './spex-review.js';
 export {
+  spexResumeToolDefinition,
+  SpexResumeInputSchema,
+  type SpexResumeInput,
+} from './spex-resume.js';
+export {
   type ToolDefinition,
   type ToolDependencies,
   errorResult,

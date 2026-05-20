@@ -6,7 +6,7 @@
 
 > AI agent orchestration framework for software development, based on versioned specs and human approval gates.
 
-> ⚠️ **Work in progress — do NOT use for real projects.** SPEX is under active development and is **not production-ready**. CLI flags, package APIs, `.ai/` artifact formats, and MCP tool shapes may change without notice and without migration paths. Expect breakages, partial features, and undocumented behavior. Use it on throwaway sandboxes for evaluation only.
+> ⚠️ **Active development.** SPEX is open for use; APIs are stabilised at `1.0.0` and minor releases will be backwards-compatible. Expect rough edges in flows that still depend on external services (Linear, PostHog, Slack). Pin to a specific version if you want strict reproducibility.
 
 See [`CLAUDE.md`](./CLAUDE.md) for the architectural decisions and code conventions, and [`CHANGELOG.md`](./CHANGELOG.md) for the per-release diff.
 
@@ -19,7 +19,7 @@ See [`CLAUDE.md`](./CLAUDE.md) for the architectural decisions and code conventi
 
 ## Install from GitHub
 
-SPEX is **not yet published to npm.** Until then, install by cloning this repo and building from source:
+SPEX is published to GitHub. The `npm` publish is on the v1.1 roadmap; until then, install by cloning this repo and building from source:
 
 ```bash
 git clone https://github.com/rogcg/spex.git
@@ -35,7 +35,7 @@ The CLI entry point is then `node packages/cli/dist/index.js`. To use it like a 
 pnpm --filter @spex/cli link --global
 ```
 
-To pin to a specific release, check out a tag before building (e.g. `git checkout v0.11.0`). An `npm install -g spex` install is not available yet.
+To pin to a specific release, check out a tag before building (e.g. `git checkout v1.0.0`). An `npm install -g spex` install is not available yet.
 
 ### Create a new project — `spex new`
 
@@ -139,6 +139,48 @@ Writes two workflows to `.github/workflows/`:
 - `implement-from-issue.yml` — when an issue is labelled `spex:implement`, SPEX implements it on a branch and opens a PR.
 
 Both workflows install SPEX from this repo via `actions/checkout` + `pnpm install` + `pnpm -r build` until SPEX is published to npm. The `SPEX_REPO` and `SPEX_REF` env vars at the top of each template let you pin a tag or a fork. The workflows require repo secrets `ANTHROPIC_API_KEY` (the default `GITHUB_TOKEN` provided by Actions is sufficient for the rest).
+
+### Resume a paused or interrupted workflow — `spex resume`
+
+```bash
+spex resume               # interactive — picks among active workflows
+spex resume <workflow-id> # resume a specific workflow
+spex resume --list        # list every workflow in .ai/scratch/ without resuming
+spex resume --abandon <workflow-id>  # delete a workflow's scratch state
+```
+
+Every `spex new` / `spex implement` / `spex fix` keeps its in-progress state
+under `.ai/scratch/workflows/<workflow-id>/` (state file + checkpoints + lock).
+`spex resume` enumerates those, classifies each (paused / interrupted / crashed),
+and routes you back into the originating flow.
+
+If `spex resume` detects a `running` workflow whose process is no longer
+alive (SIGKILL, OOM, system crash), it classifies it as `interrupted` and —
+if file content drift against the last checkpoint is detected — as
+`partial_write`. Partial writes flag the affected paths so you can review
+before resuming. State conflict resolution on resume offers per-file
+choices: keep the current file, restore the checkpoint version, diff, or
+abort the entire workflow.
+
+### Query the audit log — `spex logs`
+
+```bash
+spex logs                                  # last 100 events, table format
+spex logs --workflow <workflow-id>         # one workflow only
+spex logs --since 1h                       # 1 hour back; also 30m, 2d, 1w
+spex logs --type llm_call --actor agent    # combine filters (AND semantics)
+spex logs --format summary                 # rollup by event type + actor
+spex logs --format json                    # raw JSON
+spex logs --export audit-snapshot.json     # write filtered events to disk
+```
+
+Audit events live under `.ai/audit/`: `global.jsonl` (every event across
+every workflow) and `workflow-<id>.jsonl` (per-workflow). Each entry is a
+single JSONL line conforming to `AuditEventSchema` — append-only, one
+event per line. Event types: `llm_call`, `decision`, `file_write`,
+`file_read`, `git_operation`, `tool_invocation`, `approval`, `error`,
+`state_transition`. Secrets (API keys, bearer tokens, signing secrets) are
+redacted at write time.
 
 ### Install Claude Code skills — `spex skills install`
 
@@ -401,9 +443,10 @@ app install to confirm scopes + channel access in under 5 seconds.
 
 Expose SPEX as tools to Claude Code, Cursor, and other MCP-compatible IDEs.
 The server speaks the [Model Context Protocol](https://modelcontextprotocol.io/)
-over stdio and registers six tools that the IDE's LLM can call directly:
+over stdio and registers seven tools that the IDE's LLM can call directly:
 
 - `spex_new`, `spex_implement`, `spex_fix`, `spex_review` — the four engine tools.
+- `spex_resume` — list, resume, or abandon paused/incomplete workflows under `.ai/scratch/`.
 - `list_skills`, `get_skill` — pull the SPEX skill bundles at runtime (see [`docs/skills.md`](./docs/skills.md)).
 
 ```bash

@@ -8,6 +8,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 While SPEX is on `0.x`, any minor release may contain breaking changes to CLI
 flags, `.ai/` artifact formats, MCP tool shapes, or schema definitions. Pin to
 a specific version (or commit SHA, until npm publish) if you need stability.
+Starting at `1.0.0`, SPEX commits to backwards-compatible minor releases.
+
+## [1.0.0] — 2026-05-20
+
+### Added — Resume capability + audit trail
+
+- **Scratch state schema** (`@spex/schemas` `ScratchStateSchema`,
+  `CheckpointSchema`, `FileSnapshotSchema`, `ScratchLockSchema`,
+  `ScratchSessionSchema`, `AuditEventSchema`). Versioned (`v1`),
+  workflow-id-validated layout under `.ai/scratch/`:
+
+  ```
+  .ai/scratch/
+  ├── session.yaml             # current active workflow pointer
+  ├── lock                     # global mutex (optional)
+  └── workflows/
+      └── <workflow-id>/
+          ├── state.yaml
+          ├── checkpoints/
+          │   └── <name>.yaml
+          └── lock
+  ```
+
+  Workflow kinds: `discovery`, `proposal`, `implementation`, `fix`.
+  Lifecycle statuses: `running`, `paused`, `completed`, `abandoned`, `crashed`.
+  File snapshots embed SHA-256 hashes for drift detection.
+
+- **State persistence layer** (`@spex/core` `createStateStore`,
+  `StateStore`). Atomic writes (write `*.tmp-<pid>-<ts>` then rename),
+  per-workflow checkpoint creation/loading, retention-based cleanup
+  of completed/abandoned workflows, and schema-version guarding at
+  load time. Companion helpers: `snapshotFiles`, `detectDrift`,
+  `acquireLock` / `releaseLock` / `readLock`, `isProcessAlive`,
+  `rollbackToCheckpoint`.
+
+- **`spex resume` command** (`@spex/cli` `runResumeCommand`). Scans
+  `.ai/scratch/workflows/` and offers to resume paused or interrupted
+  workflows. `spex resume` interactively picks; `spex resume <id>`
+  resumes by id; `spex resume --list` enumerates without resuming;
+  `spex resume --abandon <id>` removes a workflow cleanly. The MCP
+  surface exposes the same operations via the new `spex_resume` tool.
+
+- **Audit log infrastructure** (`@spex/core` `createAuditLogger`,
+  `createAuditReader`). Append-only JSONL under `.ai/audit/` with both
+  a `global.jsonl` aggregate and per-workflow `workflow-<id>.jsonl`
+  files. Each entry conforms to `AuditEventSchema` (timestamp,
+  workflowId, type, actor, payload, optional correlationId).
+  Event types: `llm_call`, `decision`, `file_write`, `file_read`,
+  `git_operation`, `tool_invocation`, `approval`, `error`,
+  `state_transition`. Secrets are redacted at write time — defaults
+  cover Anthropic, OpenAI, GitHub, Slack, Linear, and PostHog token
+  shapes, plus generic `Bearer ...` patterns and sensitive key names
+  (`api_key`, `secret`, `password`, `token`, `authorization`, …).
+
+- **`spex logs` command** (`@spex/cli` `runLogsCommand`). Query +
+  filter + render the audit log: `--workflow <id>`, `--since <dur>`
+  (e.g. `1h`, `2d`, `30m`), `--type <event-type>`,
+  `--actor <user|agent|system>`, `--format <table|json|summary>`,
+  `--export <path>`, and `--tail`. All filters compose with AND
+  semantics. Summary format gives a per-type and per-actor rollup;
+  table format is one line per event; JSON pretty-prints the raw events.
+
+- **State conflict resolution on resume** (`@spex/core`
+  `buildConflictReport`, `resolveConflicts`). Compares the project's
+  current filesystem state against the snapshots in the most-recent
+  checkpoint and reports three classes of drift — `modified`,
+  `deleted`, and `unexpected` (files SPEX did not create). The
+  `resolveConflicts` helper drives an interactive resolution loop
+  via a pluggable `ConflictPrompter` with four outcomes per file:
+  `keep_current`, `restore_checkpoint`, `diff` (re-prompts), and
+  `abort` (stops the loop and flags the report aborted).
+
+- **Crash recovery** (`@spex/core` `detectCrashedWorkflows`).
+  Identifies workflows in `running` state whose owning process is
+  no longer alive and classifies them: `clean` (paused, nothing to
+  do), `interrupted` (PID gone, no drift), `partial_write`
+  (interrupted + content hash mismatch against last checkpoint), or
+  `foreign_host` (lock acquired on a different machine — we can't
+  tell PID liveness, so we surface but do not auto-act). Detection
+  uses POSIX-portable `process.kill(pid, 0)` plus hostname matching
+  from the lock file.
+
+- **MCP `spex_resume` tool** exposes resume operations to MCP-aware
+  IDEs (Claude Code, Cursor). Inputs: `project_dir`, optional
+  `workflow_id`, `list`, or `abandon`. Returns the workflow list,
+  the resumable subset, or the abandoned id.
+
+### Changed — Version semantics
+
+- SPEX is now `1.0.0`. From this point onward, minor versions are
+  backwards-compatible and breaking changes only land in major
+  releases.
 
 ## [0.11.0] — 2026-05-20
 

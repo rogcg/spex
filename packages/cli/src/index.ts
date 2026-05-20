@@ -4,9 +4,11 @@ import { runGithubSetupCommand } from './commands/github-setup.js';
 import { runImplementCommand } from './commands/implement.js';
 import { runInitCommand } from './commands/init.js';
 import { runLinearSyncCommand } from './commands/linear-sync.js';
+import { runLogsCommand } from './commands/logs.js';
 import { runMcpServerCommand } from './commands/mcp-server.js';
 import { runNewCommand } from './commands/new.js';
 import { runPostHogWebhookCommand } from './commands/posthog-webhook.js';
+import { runResumeCommand } from './commands/resume.js';
 import { runReviewCommand } from './commands/review.js';
 import { parseSkillsInstallScope, runSkillsInstallCommand } from './commands/skills-install.js';
 import { runSlackWebhookCommand } from './commands/slack-webhook.js';
@@ -301,6 +303,66 @@ skills
       handleError(error);
     }
   });
+
+program
+  .command('resume')
+  .description(STRINGS.resumeCommand.description)
+  .argument('[workflow-id]', STRINGS.resumeCommand.workflowIdArgDescription)
+  .option('--list', STRINGS.resumeCommand.listFlagDescription)
+  .option('--abandon <id>', STRINGS.resumeCommand.abandonFlagDescription)
+  .action(async (workflowId: string | undefined, opts: { list?: boolean; abandon?: string }) => {
+    printBanner();
+    try {
+      await runResumeCommand({
+        ...(workflowId ? { workflowId } : {}),
+        ...(opts.list ? { list: true } : {}),
+        ...(opts.abandon ? { abandon: opts.abandon } : {}),
+      });
+    } catch (error) {
+      handleError(error);
+    }
+  });
+
+program
+  .command('logs')
+  .description(STRINGS.logsCommand.description)
+  .option('--workflow <id>', STRINGS.logsCommand.workflowFlagDescription)
+  .option('--since <duration>', STRINGS.logsCommand.sinceFlagDescription)
+  .option('--type <type>', STRINGS.logsCommand.typeFlagDescription)
+  .option('--actor <actor>', STRINGS.logsCommand.actorFlagDescription)
+  .option('--format <format>', STRINGS.logsCommand.formatFlagDescription, 'table')
+  .option('--export <path>', STRINGS.logsCommand.exportFlagDescription)
+  .option('--tail', STRINGS.logsCommand.tailFlagDescription)
+  .option('--limit <n>', STRINGS.logsCommand.limitFlagDescription, '100')
+  .action(
+    async (opts: {
+      workflow?: string;
+      since?: string;
+      type?: string;
+      actor?: string;
+      format?: string;
+      export?: string;
+      tail?: boolean;
+      limit?: string;
+    }) => {
+      printBanner();
+      try {
+        const limitNumber = opts.limit ? Number.parseInt(opts.limit, 10) : 100;
+        await runLogsCommand({
+          ...(opts.workflow ? { workflowId: opts.workflow } : {}),
+          ...(opts.since ? { since: opts.since } : {}),
+          ...(opts.type ? { type: opts.type } : {}),
+          ...(opts.actor ? { actor: opts.actor } : {}),
+          ...(opts.format ? { format: opts.format } : {}),
+          ...(opts.export ? { export: opts.export } : {}),
+          ...(opts.tail ? { tail: true } : {}),
+          limit: Number.isFinite(limitNumber) ? limitNumber : 100,
+        });
+      } catch (error) {
+        handleError(error);
+      }
+    },
+  );
 
 program
   .command('mcp-server')
