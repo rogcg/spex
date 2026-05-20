@@ -37,14 +37,30 @@ program
   .option('--stack <label>', STRINGS.newCommand.stackFlagDescription)
   .option('--constraints <text>', STRINGS.newCommand.constraintsFlagDescription)
   .option('--brainstorm', STRINGS.newCommand.brainstormFlagDescription)
+  .option('--auto', STRINGS.newCommand.autoFlagDescription)
+  .option('--strict', STRINGS.newCommand.strictFlagDescription)
+  .option('--resume', STRINGS.newCommand.resumeFlagDescription)
   .action(
-    async (name: string, opts: { stack?: string; constraints?: string; brainstorm?: boolean }) => {
+    async (
+      name: string,
+      opts: {
+        stack?: string;
+        constraints?: string;
+        brainstorm?: boolean;
+        auto?: boolean;
+        strict?: boolean;
+        resume?: boolean;
+      },
+    ) => {
       printBanner();
       try {
         await runNewCommand(name, {
           ...(opts.stack ? { stack: opts.stack } : {}),
           ...(opts.constraints ? { constraints: opts.constraints } : {}),
           ...(opts.brainstorm ? { brainstorm: true } : {}),
+          ...(opts.auto ? { auto: true } : {}),
+          ...(opts.strict ? { strict: true } : {}),
+          ...(opts.resume ? { resume: true } : {}),
         });
       } catch (error) {
         handleError(error);

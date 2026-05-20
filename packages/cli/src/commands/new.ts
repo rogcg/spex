@@ -5,14 +5,22 @@ import { confirm } from '@inquirer/prompts';
 import {
   AnthropicProvider,
   MissingApiKeyError,
+  ProposalPausedError,
   ScaffoldFailedError,
-  generateTechSpec,
+  appendDecisionAuditEntry,
+  assembleTechSpec,
+  auditLogPath,
+  generateProposalDecisions,
   injectAiFolder,
+  loadProposalState,
   runCommand,
   runDiscovery,
+  runProposalApproval,
   runScaffold,
   techSpecToYaml,
 } from '@spex/core';
+import type { Decision } from '@spex/schemas';
+import { defaultDecisionPrompter } from '../flows/decision-approval.js';
 import { type StackSelectionEntryState, runStackSelection } from '../flows/stack-selection.js';
 import { STRINGS } from '../strings.js';
 
@@ -22,6 +30,9 @@ export interface NewCommandOptions {
   stack?: string;
   constraints?: string;
   brainstorm?: boolean;
+  auto?: boolean;
+  strict?: boolean;
+  resume?: boolean;
 }
 
 export async function runNewCommand(
@@ -36,21 +47,35 @@ export async function runNewCommand(
 
   const parentDir = process.cwd();
   const projectDir = resolve(parentDir, projectName);
+  const scratchPath = resolve(parentDir, `.${projectName}-spex-proposal.yaml`);
 
-  if (existsSync(projectDir)) {
+  let resumeState: Awaited<ReturnType<typeof loadProposalState>> | null = null;
+  if (options.resume) {
+    if (!existsSync(scratchPath)) {
+      console.error(`Error: no paused proposal found at ${scratchPath}.`);
+      process.exitCode = 1;
+      return;
+    }
+    resumeState = await loadProposalState(scratchPath);
+    console.log(STRINGS.newCommand.proposalResuming(scratchPath));
+  }
+
+  if (!resumeState && existsSync(projectDir)) {
     console.error(STRINGS.errors.projectExists(projectName));
     process.exitCode = 1;
     return;
   }
 
-  console.log(STRINGS.newCommand.aboutToCreate(projectName));
-  const confirmedName = await confirm({
-    message: STRINGS.newCommand.confirmProjectName(projectName),
-    default: true,
-  });
-  if (!confirmedName) {
-    console.log(STRINGS.newCommand.cancelled);
-    return;
+  if (!resumeState) {
+    console.log(STRINGS.newCommand.aboutToCreate(projectName));
+    const confirmedName = await confirm({
+      message: STRINGS.newCommand.confirmProjectName(projectName),
+      default: true,
+    });
+    if (!confirmedName) {
+      console.log(STRINGS.newCommand.cancelled);
+      return;
+    }
   }
 
   let llm: AnthropicProvider;
@@ -65,32 +90,109 @@ export async function runNewCommand(
     throw error;
   }
 
-  console.log(STRINGS.newCommand.discoveryHeader);
-  const answers = await runDiscovery();
+  let initialDecisions: Decision[];
+  let startIndex = 0;
+  let stackDecisionResult: Awaited<ReturnType<typeof runStackSelection>>;
+  let answers: Awaited<ReturnType<typeof runDiscovery>>;
 
-  console.log(STRINGS.newCommand.selectingStackHeader);
-  const entry = pickEntryState(options);
-  const decision = await runStackSelection({
-    llm,
+  if (resumeState) {
+    // Resume path: rehydrate decisions from scratch state.
+    // The discovery + stack decision must be reconstructed from the resolved
+    // values on the decision list. For Sprint 11 we keep this simple: prompt
+    // the user to re-run discovery + stack selection to pick up where we left
+    // off in the iterative gates. The decision list itself is preserved.
+    console.log(STRINGS.newCommand.discoveryHeader);
+    answers = await runDiscovery();
+    console.log(STRINGS.newCommand.selectingStackHeader);
+    stackDecisionResult = await runStackSelection({
+      llm,
+      projectName,
+      answers,
+      entry: pickEntryState(options),
+    });
+    initialDecisions = resumeState.decisions;
+    startIndex = resumeState.currentIndex;
+  } else {
+    console.log(STRINGS.newCommand.discoveryHeader);
+    answers = await runDiscovery();
+
+    console.log(STRINGS.newCommand.selectingStackHeader);
+    stackDecisionResult = await runStackSelection({
+      llm,
+      projectName,
+      answers,
+      entry: pickEntryState(options),
+    });
+
+    console.log(STRINGS.newCommand.generatingProposalHeader);
+    initialDecisions = await generateProposalDecisions({
+      llm,
+      projectName,
+      answers,
+      decision: stackDecisionResult,
+    });
+    console.log(STRINGS.newCommand.proposalDecisionCount(initialDecisions.length));
+  }
+
+  if (options.auto) {
+    console.log(STRINGS.newCommand.autoModeWarning);
+    if (options.strict) {
+      console.log(STRINGS.newCommand.autoStrictReminder);
+    }
+  } else {
+    console.log(STRINGS.newCommand.iterativeGatesHeader);
+  }
+
+  const auditLog = auditLogPath({ projectDir });
+  const stagedAuditEntries: Parameters<typeof appendDecisionAuditEntry>[1][] = [];
+
+  let approvedDecisions: Decision[];
+  try {
+    const result = await runProposalApproval({
+      llm,
+      projectName,
+      decisions: initialDecisions,
+      prompter: defaultDecisionPrompter(),
+      audit: {
+        async write(entry) {
+          stagedAuditEntries.push(entry);
+        },
+      },
+      ...(options.auto ? { auto: true } : {}),
+      ...(options.strict ? { strict: true } : {}),
+      scratchPath,
+      ...(startIndex > 0 ? { startIndex } : {}),
+    });
+    approvedDecisions = result.decisions;
+  } catch (error) {
+    if (error instanceof ProposalPausedError) {
+      console.log(STRINGS.newCommand.proposalPaused(error.scratchPath));
+      return;
+    }
+    throw error;
+  }
+
+  console.log(STRINGS.newCommand.assembleSpec);
+  const spec = assembleTechSpec({
     projectName,
     answers,
-    entry,
+    stackDecision: stackDecisionResult,
+    decisions: approvedDecisions,
   });
-
-  console.log(STRINGS.newCommand.generatingSpec);
-  const spec = await generateTechSpec({ llm, projectName, answers, decision });
 
   console.log(STRINGS.newCommand.specReady);
   console.log(techSpecToYaml(spec));
   console.log(STRINGS.newCommand.specReadyFooter);
 
-  const approvedSpec = await confirm({
-    message: STRINGS.newCommand.confirmApproveSpec,
-    default: true,
-  });
-  if (!approvedSpec) {
-    console.log(STRINGS.newCommand.cancelled);
-    return;
+  if (!options.auto) {
+    const approvedSpec = await confirm({
+      message: STRINGS.newCommand.confirmApproveSpec,
+      default: true,
+    });
+    if (!approvedSpec) {
+      console.log(STRINGS.newCommand.cancelled);
+      return;
+    }
   }
 
   console.log(STRINGS.newCommand.scaffolding(projectName));
@@ -100,7 +202,7 @@ export async function runNewCommand(
       projectName,
       parentDir,
       projectDir,
-      decision,
+      decision: stackDecisionResult,
       onEvent: (event) => {
         switch (event.kind) {
           case 'planning':
@@ -137,6 +239,15 @@ export async function runNewCommand(
 
   console.log(STRINGS.newCommand.injectingAi);
   await injectAiFolder({ projectDir, spec });
+
+  // Flush staged audit entries into the now-existing project .ai/audit/ folder.
+  for (const entry of stagedAuditEntries) {
+    await appendDecisionAuditEntry(auditLog, entry);
+  }
+  console.log(STRINGS.newCommand.auditWritten(auditLog));
+
+  // Clean up the transient scratch file from a successful run.
+  await rm(scratchPath, { force: true }).catch(() => {});
 
   console.log(STRINGS.newCommand.gitInit);
   await runCommand('git', ['init'], { cwd: projectDir });

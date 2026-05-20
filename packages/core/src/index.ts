@@ -2,6 +2,7 @@ export { SpexError, MissingApiKeyError } from './errors.js';
 export * from './llm/index.js';
 export * from './discovery/index.js';
 export * from './tech-spec/index.js';
+export * from './proposal/index.js';
 export * from './scaffold/index.js';
 export * from './stack/index.js';
 export * from './init/index.js';

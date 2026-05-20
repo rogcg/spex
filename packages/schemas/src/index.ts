@@ -139,3 +139,18 @@ export {
   type ScaffoldPlan,
   type ScaffoldStep,
 } from './scaffold-plan.js';
+export {
+  DECISION_ID_PATTERN,
+  DecisionAlternativeSchema,
+  DecisionConfidenceSchema,
+  DecisionListSchema,
+  DecisionSchema,
+  DecisionStatusSchema,
+  ProposalStateSchema,
+  type Decision,
+  type DecisionAlternative,
+  type DecisionConfidence,
+  type DecisionList,
+  type DecisionStatus,
+  type ProposalState,
+} from './decision.js';

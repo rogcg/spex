@@ -12,6 +12,12 @@ export const STRINGS = {
     constraintsFlagDescription:
       'hard constraints honored by the recommender (e.g. "must use Postgres")',
     brainstormFlagDescription: 'open a brainstorm session to converge on a stack collaboratively',
+    autoFlagDescription:
+      'skip iterative decision gates — auto-accept every AI-proposed decision (logs WARNING)',
+    strictFlagDescription:
+      'with --auto: abort if any decision has low confidence instead of accepting',
+    resumeFlagDescription:
+      'resume a paused proposal from .ai/scratch/proposal-state.yaml in the project dir',
 
     aboutToCreate: (name: string) => `About to create a new project: ${name}`,
     confirmProjectName: (name: string) => `Create project "${name}"?`,
@@ -21,10 +27,25 @@ export const STRINGS = {
 
     selectingStackHeader: '\nSelecting a stack...',
 
+    generatingProposalHeader: '\nDrafting tech-spec decisions via Claude...',
+    proposalDecisionCount: (n: number) => `  ${n} decisions ready for review.`,
+    iterativeGatesHeader:
+      '\n=== Iterative decision gates ===\n(Use [a]ccept, [r]eject, [d]ebate, [e]xplore, [m]odify, [p]ause)',
+    autoModeWarning:
+      'Warning: --auto mode is active — every AI-proposed decision will be auto-accepted. Audit trail is still recorded.',
+    strictAbort: (id: string) => `Aborted by --strict: low-confidence decision "${id}".`,
+    autoStrictReminder:
+      '  --strict is active: any decision with confidence "low" will abort the run.',
+
+    assembleSpec: '\nAssembling tech spec from approved decisions...',
     generatingSpec: '\nGenerating tech spec via Claude...',
     specReady: '\n=== Generated tech-spec.yaml ===\n',
     specReadyFooter: '=== end of tech-spec.yaml ===\n',
     confirmApproveSpec: 'Approve this tech spec and proceed with scaffolding?',
+    proposalPaused: (path: string) =>
+      `\nProposal paused. State saved to:\n  ${path}\n\nResume later with:\n  spex new <name> --resume`,
+    proposalResuming: (path: string) => `\nResuming paused proposal from:\n  ${path}`,
+    auditWritten: (path: string) => `  Audit trail: ${path}`,
 
     planningScaffold: '\nPlanning scaffold via Claude...',
     scaffoldPlanPreview: '\n=== Scaffold plan ===\n',
@@ -44,6 +65,30 @@ export const STRINGS = {
 
     success: (name: string, dir: string) =>
       `\nProject "${name}" created at:\n  ${dir}\n\nNext steps:\n  cd ${name}\n  pnpm dev\n`,
+  },
+
+  decisionApproval: {
+    header: (current: number, total: number) => `\n--- Decision ${current}/${total} ---`,
+    category: (category: string, path: string) => `  category: ${category}    (techSpec: ${path})`,
+    question: (q: string) => `  question: ${q}`,
+    proposal: (p: string) => `  proposal: ${p}`,
+    rationale: (r: string) => `  rationale: ${r}`,
+    confidence: (c: string) => `  confidence: ${c}`,
+    alternativesHeader: '  alternatives:',
+    prompt: 'What do you want to do with this decision?',
+    accept: '[a] Accept the proposal',
+    reject: '[r] Reject — ask the AI to revise',
+    debate: '[d] Debate — express a concern, get the AI to respond',
+    explore: '[e] Explore — see 2–3 alternatives with trade-offs',
+    modify: '[m] Modify — enter the value directly',
+    pause: '[p] Pause — save state and exit',
+    pickAlternative: (label: string) => `[pick] ${label}`,
+    rejectReasonPrompt: 'Why does this proposal not fit? (the AI will use this to revise)',
+    debatePrompt: 'What is your concern?',
+    modifyValuePrompt: 'Enter the value to apply:',
+    modifyNotePrompt: 'Optional note for the audit log:',
+    debateResponseHeader: '\n  --- AI response ---',
+    debateResponseFooter: '  --- end of response ---\n',
   },
 
   stackSelection: {

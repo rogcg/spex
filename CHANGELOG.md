@@ -9,6 +9,86 @@ While SPEX is on `0.x`, any minor release may contain breaking changes to CLI
 flags, `.ai/` artifact formats, MCP tool shapes, or schema definitions. Pin to
 a specific version (or commit SHA, until npm publish) if you need stability.
 
+## [0.11.0] — 2026-05-20
+
+### Added — Iterative decision gates for `spex new`
+
+- **Decision schema** (`@spex/schemas` `DecisionSchema`,
+  `DecisionListSchema`, `ProposalStateSchema`). A `Decision` represents a
+  single, individually-approvable tech-spec field with an id, ordered
+  position, category (`project` | `context` | `stack` | `rationale`),
+  question, proposed value, rationale, target `techSpecPath`, confidence
+  (`high` | `medium` | `low`), optional alternatives, and lifecycle
+  status (`pending` → `presented` → `accepted` / `rejected` / `modified`).
+  Resolved values + audit notes are captured on the same record. The
+  proposal phase no longer emits a single monolithic tech-spec.
+- **Proposal decision generator** (`@spex/core`
+  `generateProposalDecisions`). The LLM breaks the tech-spec into
+  10–14 ordered decisions covering project identity, context fields
+  (re-affirmed verbatim from discovery answers), per-component stack
+  rationale, and an overall rationale ≥ 50 chars. The committed
+  `StackDecision` from stack selection is never re-questioned.
+- **On-demand revision, debate, and alternatives**
+  (`@spex/core` `reviseDecision`, `debateDecision`,
+  `exploreDecisionAlternatives`). Reject → AI rewrites the proposal
+  with the user's feedback inline (status → `modified`). Debate → AI
+  defends or refines the proposal as free-form prose without changing
+  status. Explore → AI generates 2–3 concrete alternatives with
+  trade-offs; the user can pick one (status → `modified`,
+  `resolvedValue` = alternative label).
+- **Iterative approval engine** (`@spex/core` `runProposalApproval`).
+  Drives each decision through a/r/d/e/m/p actions via a pluggable
+  `DecisionPrompter`, stages audit entries as decisions resolve, and
+  preserves the original AI proposal alongside any user override. The
+  engine itself is UI-free; the CLI ships the default inquirer prompter.
+- **Decision audit trail** (`@spex/core` `auditLogPath`,
+  `appendDecisionAuditEntry`). Each decision is logged as a single
+  JSONL line under `.ai/audit/decisions-<ISO-timestamp>.jsonl` with
+  decision id, order, category, target tech-spec path, status,
+  confidence, the AI's original proposal + rationale, the
+  user-resolved value (when different), optional user note, and an
+  ISO timestamp. Append-only by design — easy to diff across runs.
+- **Pause / resume** (`@spex/core` `ProposalPausedError`,
+  `saveProposalState`, `loadProposalState`). The `[p]ause` action
+  serialises decisions, the current index, and a paused-at timestamp
+  to YAML and exits cleanly. `spex new <name> --resume` reloads the
+  paused proposal and continues at the same decision. For `spex new`,
+  the transient scratch lives at
+  `<parentDir>/.<projectName>-spex-proposal.yaml`; it is removed on a
+  successful run.
+- **`--auto` batch acceptance** (`spex new --auto`). Skips the
+  interactive gates and auto-accepts every AI proposal. Still writes
+  the audit trail. Logs a WARNING at start so the operator never loses
+  track of which run was assisted vs un-gated.
+- **`--strict` low-confidence guard** (`spex new --auto --strict`).
+  Aborts the run on the first decision flagged `confidence: low` by
+  the architect instead of accepting it. No effect outside `--auto`.
+- **`spex new` CLI rewired.** End-to-end flow is now discovery →
+  stack selection → `generateProposalDecisions` → `runProposalApproval`
+  (with optional pause) → `assembleTechSpec` from accepted decisions →
+  scaffold → `.ai/` injection → audit log persisted under
+  `.ai/audit/`. Audit entries staged during the proposal phase
+  (before the project directory exists) are flushed once `.ai/` is
+  written.
+
+### Verified
+
+- 9 new `@spex/schemas` decision schema tests, 4 `@spex/core`
+  `assembleTechSpec` tests covering accepted, modified, and component
+  override paths, 5 `runProposalApproval` tests (auto + auto/strict +
+  accept-modify-reject sequence + pause/resume scratch I/O + explore /
+  pick-alternative), 2 audit-trail tests (JSONL appendability +
+  per-run path stamping), 2 `proposal-state` round-trip tests. All 374
+  core tests pass on Linux CI; the 6 pre-existing Windows-only flakes
+  (pino + drive-letter path issues unchanged from 0.5.0) are unaffected.
+
+### Known issues
+
+- Unchanged from 0.5.0 / 0.7.0 / 0.8.0 / 0.9.0 / 0.10.0:
+  `src/logger/logger.test.ts` and `src/implementation/safety.test.ts`
+  flake on Windows due to pino file-handle race + drive-letter
+  resolution differences. Pass on Linux CI.
+
 ## [0.10.0] — 2026-05-20
 
 ### Added — Adaptive stack selection
@@ -515,6 +595,8 @@ a specific version (or commit SHA, until npm publish) if you need stability.
 - CI workflow (`.github/workflows/ci.yml`) running install, lint,
   typecheck, test on push + PR.
 
+[0.11.0]: https://github.com/rogcg/spex/releases/tag/v0.11.0
+[0.10.0]: https://github.com/rogcg/spex/releases/tag/v0.10.0
 [0.9.0]: https://github.com/rogcg/spex/releases/tag/v0.9.0
 [0.8.0]: https://github.com/rogcg/spex/releases/tag/v0.8.0
 [0.7.0]: https://github.com/rogcg/spex/releases/tag/v0.7.0
