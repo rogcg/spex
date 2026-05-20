@@ -32,6 +32,7 @@
     "@spex/integrations-slack": "workspace:^",
     "@spex/mcp-server": "workspace:^",
     "@spex/schemas": "workspace:*",
+    "@spex/skills": "workspace:*",
     "commander": "^12.1.0"
   },
   "devDependencies": {

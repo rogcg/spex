@@ -449,6 +449,24 @@ export const STRINGS = {
     syncFailed: (message: string) => `Error: linear sync failed: ${message}`,
   },
 
+  skillsCommand: {
+    description: 'Manage SPEX skill bundles (markdown agent instructions)',
+  },
+
+  skillsInstallCommand: {
+    description: 'Install SPEX skills into a Claude Code skills directory',
+    scopeFlagDescription:
+      'where to install: "user" (~/.claude/skills/) or "project" (./.claude/skills/) — default user',
+
+    starting: (scope: string, dest: string) =>
+      `\nInstalling SPEX skills (scope: ${scope})\n  into: ${dest}`,
+    noSkills: '\nNo skills found in @spex/skills — nothing to install.',
+    wrote: (name: string, path: string) => `  ✓ ${name} → ${path}`,
+    done: (count: number) => `\nDone. ${count} skill(s) installed.\n`,
+    invalidScope: (raw: string) =>
+      `Error: invalid scope "${raw}". Use --scope=user or --scope=project.`,
+  },
+
   errors: {
     missingApiKey: (envVar: string) =>
       `Error: ${envVar} is not set. Set it in your environment or a .env file before running spex new.`,

@@ -8,6 +8,7 @@ import { runMcpServerCommand } from './commands/mcp-server.js';
 import { runNewCommand } from './commands/new.js';
 import { runPostHogWebhookCommand } from './commands/posthog-webhook.js';
 import { runReviewCommand } from './commands/review.js';
+import { parseSkillsInstallScope, runSkillsInstallCommand } from './commands/skills-install.js';
 import { runSlackWebhookCommand } from './commands/slack-webhook.js';
 import { STRINGS } from './strings.js';
 import { printBanner } from './ui/banner.js';
@@ -259,6 +260,22 @@ program
       }
     },
   );
+
+const skills = program.command('skills').description(STRINGS.skillsCommand.description);
+
+skills
+  .command('install')
+  .description(STRINGS.skillsInstallCommand.description)
+  .option('--scope <scope>', STRINGS.skillsInstallCommand.scopeFlagDescription, 'user')
+  .action(async (opts: { scope?: string }) => {
+    printBanner();
+    try {
+      const scope = parseSkillsInstallScope(opts.scope ?? 'user');
+      await runSkillsInstallCommand({ scope });
+    } catch (error) {
+      handleError(error);
+    }
+  });
 
 program
   .command('mcp-server')
