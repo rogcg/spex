@@ -37,16 +37,15 @@ const sampleSpec: TechSpec = {
     data_persistence: 'Simple key-value',
   },
   stack: {
-    language: 'typescript',
-    frontend: {
-      framework: 'nextjs',
-      version: '15',
-      styling: 'tailwindcss',
-      app_router: true,
-    },
-  },
-  scaffolding_plan: {
-    commands: ['pnpm install  # project already scaffolded'],
+    label: 'Next.js 15 App Router + Tailwind',
+    source: 'recommended',
+    components: [
+      { role: 'language', choice: 'TypeScript', rationale: 'tsconfig.json present' },
+      { role: 'framework', choice: 'Next.js 15 App Router', rationale: 'src/app/ present' },
+      { role: 'styling', choice: 'Tailwind CSS', rationale: '"tailwindcss" dep declared' },
+    ],
+    tradeoffs: [],
+    validation_warnings: [],
   },
   rationale:
     'The project already uses Next.js App Router with Tailwind, which fits the described internal tool well.',

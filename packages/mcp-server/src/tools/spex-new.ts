@@ -1,16 +1,20 @@
 import { existsSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import {
   AnthropicProvider,
   type LLMProvider,
   MissingApiKeyError,
-  type ScaffoldNextJsAppOptions,
+  type RunScaffoldOptions,
+  type RunScaffoldResult,
+  ScaffoldFailedError,
   generateTechSpec,
   injectAiFolder,
-  scaffoldNextJsApp,
+  recommendStack,
+  runScaffold,
 } from '@spex/core';
-import type { TechSpec } from '@spex/schemas';
+import type { StackDecision, TechSpec } from '@spex/schemas';
 import { z } from 'zod';
 import {
   type ToolDefinition,
@@ -35,6 +39,12 @@ export const SpexNewInputSchema = z.object({
   auth_requirements: z.string().default('None'),
   data_persistence: z.string().default('Simple key-value'),
   /**
+   * Optional explicit stack label. If supplied, the user's choice is honored
+   * (validation warnings, if any, are logged but do not block). If omitted, the
+   * recommender's top-ranked stack is selected automatically.
+   */
+  stack: z.string().optional(),
+  /**
    * Where to create the project. Defaults to `process.cwd()`. The MCP host
    * typically passes the user's workspace root here.
    */
@@ -45,18 +55,16 @@ export type SpexNewInput = z.infer<typeof SpexNewInputSchema>;
 
 export interface SpexNewDependencies extends ToolDependencies {
   /**
-   * Override for the Next.js scaffolder. Tests stub this to avoid spawning
-   * `create-next-app` (network + slow). In production this defaults to
-   * `scaffoldNextJsApp` with `stdio: 'pipe'` so child output never reaches the
-   * MCP protocol stream on stdout.
+   * Override for the dynamic scaffold runner. Tests stub this to avoid spawning
+   * real CLIs and network I/O.
    */
-  scaffold?: (options: ScaffoldNextJsAppOptions) => Promise<void>;
+  scaffold?: (options: RunScaffoldOptions) => Promise<RunScaffoldResult>;
 }
 
 const TOOL: Tool = {
   name: 'spex_new',
   description:
-    'Create a new SPEX-managed Next.js + TypeScript + Tailwind project from scratch. Generates a tech-spec from the supplied discovery answers, scaffolds via create-next-app, and injects a .ai/ folder. Non-interactive: pass all discovery answers upfront.',
+    'Create a new SPEX-managed project from scratch. The AI recommends a best-fit stack from the supplied discovery answers (or honors the optional `stack` argument), generates a tech-spec, plans the scaffold dynamically, executes it with a verification + self-correction loop, then injects a .ai/ folder. Non-interactive: pass all discovery answers upfront.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -88,6 +96,11 @@ const TOOL: Tool = {
         type: 'string',
         description:
           'Data persistence needs. Common values: No backend (static site), Simple key-value, Relational database, Multi-source complex data.',
+      },
+      stack: {
+        type: 'string',
+        description:
+          'Optional explicit stack label (e.g. "Next.js + Postgres + Drizzle"). When omitted, the recommender chooses.',
       },
       parent_dir: {
         type: 'string',
@@ -137,17 +150,46 @@ export const spexNewToolDefinition: ToolDefinition = {
       data_persistence: input.data_persistence,
     };
 
+    let decision: StackDecision;
+    try {
+      decision = await pickStackDecision({
+        llm,
+        projectName: input.name,
+        answers,
+        ...(input.stack ? { explicitChoice: input.stack } : {}),
+      });
+    } catch (cause) {
+      return errorResult(`Stack selection failed: ${formatError(cause)}`);
+    }
+
     let techSpec: TechSpec;
     try {
-      techSpec = await generateTechSpec({ llm, projectName: input.name, answers });
+      techSpec = await generateTechSpec({ llm, projectName: input.name, answers, decision });
     } catch (cause) {
       return errorResult(`Tech-spec generation failed: ${formatError(cause)}`);
     }
 
-    const scaffold = deps.scaffold ?? defaultScaffold;
+    const scaffold = deps.scaffold ?? runScaffold;
+    let scaffoldResult: RunScaffoldResult;
     try {
-      await scaffold({ projectName: input.name, parentDir, stdio: 'pipe' });
+      scaffoldResult = await scaffold({
+        llm,
+        projectName: input.name,
+        parentDir,
+        projectDir,
+        decision,
+      });
     } catch (cause) {
+      if (cause instanceof ScaffoldFailedError) {
+        await rm(projectDir, { recursive: true, force: true }).catch(() => {});
+        return errorResult('Scaffold failed after self-correction attempts.', {
+          attempts: cause.attempts.map((a) => ({
+            attempt: a.attempt,
+            ok: a.verification.ok,
+            failedPostConditions: a.verification.failedPostConditions,
+          })),
+        });
+      }
       return errorResult(`Scaffold failed: ${formatError(cause)}`);
     }
 
@@ -161,13 +203,50 @@ export const spexNewToolDefinition: ToolDefinition = {
       status: 'success',
       projectDir,
       techSpec,
+      scaffold: {
+        attempts: scaffoldResult.attempts.length,
+        stackLabel: scaffoldResult.plan.stackLabel,
+      },
       filesCreated: ['.ai/tech-spec.yaml', '.ai/README.md'],
     });
   },
 };
 
-async function defaultScaffold(options: ScaffoldNextJsAppOptions): Promise<void> {
-  await scaffoldNextJsApp({ ...options, stdio: options.stdio ?? 'pipe' });
+interface PickStackDecisionArgs {
+  llm: LLMProvider;
+  projectName: string;
+  answers: Record<string, string>;
+  explicitChoice?: string;
+}
+
+async function pickStackDecision(args: PickStackDecisionArgs): Promise<StackDecision> {
+  const recs = await recommendStack({
+    llm: args.llm,
+    projectName: args.projectName,
+    answers: args.answers,
+    ...(args.explicitChoice
+      ? {
+          explicitConstraints: `User explicitly requested this stack: ${args.explicitChoice}. Use exactly this label/components in the primary recommendation.`,
+        }
+      : {}),
+  });
+  const primary = recs.recommendations[0];
+  if (!primary) {
+    throw new Error('Recommendation engine returned no recommendations.');
+  }
+  const warnings = [...primary.requirementsUnaddressed, ...recs.unmappedRequirements];
+  const source = args.explicitChoice ? 'user' : 'recommended';
+  const rationale = args.explicitChoice
+    ? `User-chosen stack: ${args.explicitChoice}. Selected ${primary.label} (confidence ${primary.confidence}).`
+    : `Selected ${primary.label} — confidence ${primary.confidence}. Covers: ${primary.requirementsCovered.join(', ')}.`;
+  return {
+    label: primary.label,
+    source,
+    components: primary.components,
+    rationale,
+    tradeoffs: primary.tradeoffs,
+    validationWarnings: warnings,
+  };
 }
 
 function formatError(cause: unknown): string {

@@ -17,18 +17,14 @@ const validSpec: TechSpec = {
     data_persistence: 'Simple key-value',
   },
   stack: {
-    language: 'typescript',
-    frontend: {
-      framework: 'nextjs',
-      version: '15',
-      styling: 'tailwindcss',
-      app_router: true,
-    },
-  },
-  scaffolding_plan: {
-    commands: [
-      'pnpm create next-app@latest demo --typescript --tailwind --app --src-dir --import-alias "@/*" --use-pnpm',
+    label: 'Next.js + Tailwind',
+    source: 'recommended',
+    components: [
+      { role: 'framework', choice: 'Next.js 15 App Router', rationale: 'Full-stack web app' },
+      { role: 'styling', choice: 'Tailwind CSS', rationale: 'Rapid prototyping' },
     ],
+    tradeoffs: ['Vercel coupling for previews'],
+    validation_warnings: [],
   },
   rationale:
     'Next.js with App Router gives us streaming SSR and a strong DX for this developer-facing tool.',
@@ -48,7 +44,6 @@ describe('techSpecToYaml', () => {
     expect(yaml).toMatch(/^project:/m);
     expect(yaml).toMatch(/^context:/m);
     expect(yaml).toMatch(/^stack:/m);
-    expect(yaml).toMatch(/^scaffolding_plan:/m);
     expect(yaml).toMatch(/^rationale:/m);
   });
 

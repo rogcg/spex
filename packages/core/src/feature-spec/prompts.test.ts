@@ -13,10 +13,15 @@ const techSpec: TechSpec = {
     data_persistence: 'Simple key-value',
   },
   stack: {
-    language: 'typescript',
-    frontend: { framework: 'nextjs', version: '15', styling: 'tailwindcss', app_router: true },
+    label: 'Next.js 15 App Router + Tailwind',
+    source: 'recommended',
+    components: [
+      { role: 'framework', choice: 'Next.js 15 App Router', rationale: 'Web app' },
+      { role: 'styling', choice: 'Tailwind CSS', rationale: 'Rapid styling' },
+    ],
+    tradeoffs: [],
+    validation_warnings: [],
   },
-  scaffolding_plan: { commands: ['pnpm install  # already scaffolded'] },
   rationale: 'Next.js App Router with Tailwind for a small internal tool — straightforward DX.',
 };
 
@@ -70,9 +75,10 @@ describe('buildFeatureSpecUserPrompt', () => {
       description: 'x',
       context: makeContext(),
     });
-    expect(prompt).toContain('nextjs 15');
-    expect(prompt).toContain('App Router: true');
-    expect(prompt).toContain('tailwindcss');
+    expect(prompt).toContain('stack: Next.js 15 App Router + Tailwind');
+    expect(prompt).toContain('source: recommended');
+    expect(prompt).toContain('framework: Next.js 15 App Router');
+    expect(prompt).toContain('styling: Tailwind CSS');
   });
 
   it('embeds package info: deps, devDeps, scripts', () => {

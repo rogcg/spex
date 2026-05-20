@@ -45,7 +45,9 @@ export function buildPlanUserPrompt(opts: BuildPlanUserPromptOptions): string {
 
 function formatCodebaseSummary(ctx: CodebaseContext): string {
   const techSpecLine = ctx.techSpec
-    ? `- tech-spec stack: ${ctx.techSpec.stack.language}, ${ctx.techSpec.stack.frontend.framework} ${ctx.techSpec.stack.frontend.version}, styling: ${ctx.techSpec.stack.frontend.styling}, App Router: ${ctx.techSpec.stack.frontend.app_router}`
+    ? `- tech-spec stack: ${ctx.techSpec.stack.label} (${ctx.techSpec.stack.components
+        .map((c) => `${c.role}=${c.choice}`)
+        .join(', ')})`
     : '- tech-spec: (none)';
   const deps = Object.keys(ctx.packageInfo.dependencies).sort();
   const devDeps = Object.keys(ctx.packageInfo.devDependencies).sort();

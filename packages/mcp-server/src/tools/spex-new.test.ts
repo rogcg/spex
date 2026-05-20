@@ -1,8 +1,8 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { LLMProvider } from '@spex/core';
-import type { TechSpec } from '@spex/schemas';
+import type { LLMProvider, RunScaffoldOptions, RunScaffoldResult } from '@spex/core';
+import type { ScaffoldPlan, StackRecommendations, TechSpec } from '@spex/schemas';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parse as parseYaml } from 'yaml';
 import { spexNewToolDefinition } from './spex-new.js';
@@ -17,15 +17,47 @@ const sampleSpec: TechSpec = {
     data_persistence: 'Simple key-value',
   },
   stack: {
-    language: 'typescript',
-    frontend: { framework: 'nextjs', version: '15', styling: 'tailwindcss', app_router: true },
-  },
-  scaffolding_plan: {
-    commands: [
-      'pnpm create next-app@latest demo-app --typescript --tailwind --app --src-dir --import-alias "@/*" --use-pnpm',
+    label: 'Next.js 15 App Router + Tailwind',
+    source: 'recommended',
+    components: [
+      { role: 'framework', choice: 'Next.js 15 App Router', rationale: 'Web app' },
+      { role: 'styling', choice: 'Tailwind CSS', rationale: 'Styling' },
     ],
+    tradeoffs: [],
+    validation_warnings: [],
   },
   rationale: 'Next.js App Router with Tailwind for a small internal tool — straightforward DX.',
+};
+
+const sampleRecommendations: StackRecommendations = {
+  recommendations: [
+    {
+      rank: 1,
+      label: 'Next.js 15 App Router + Tailwind',
+      components: [
+        { role: 'framework', choice: 'Next.js 15 App Router', rationale: 'SSR web app' },
+        { role: 'styling', choice: 'Tailwind CSS', rationale: 'Rapid styling' },
+      ],
+      tradeoffs: [],
+      confidence: 'high',
+      requirementsCovered: ['internal tool', 'OAuth'],
+      requirementsUnaddressed: [],
+    },
+  ],
+  unmappedRequirements: [],
+};
+
+const samplePlan: ScaffoldPlan = {
+  stackLabel: sampleSpec.stack.label,
+  steps: [
+    {
+      kind: 'command',
+      cmd: 'pnpm',
+      args: ['create', 'next-app@latest', 'demo-app'],
+      rationale: 'scaffold',
+    },
+  ],
+  postConditions: ['package.json exists'],
 };
 
 let parentDir: string;
@@ -53,6 +85,7 @@ describe('spexNewToolDefinition', () => {
         'expected_scale',
         'auth_requirements',
         'data_persistence',
+        'stack',
         'parent_dir',
       ]),
     );
@@ -73,23 +106,37 @@ describe('spexNewToolDefinition', () => {
     await mkdir(join(parentDir, 'demo-app'), { recursive: true });
     const result = await spexNewToolDefinition.handle(
       { name: 'demo-app', project_type: 'tool', parent_dir: parentDir },
-      { llm: stubLlm(sampleSpec), scaffold: vi.fn() },
+      { llm: stubLlm([sampleRecommendations, sampleSpec]), scaffold: vi.fn() },
     );
     expect(result.isError).toBe(true);
     expect(parseTextPayload(result.content?.[0]).message).toContain('already exists');
   });
 
-  it('runs LLM tech-spec generation, calls the scaffold stub, and writes the .ai/ folder', async () => {
-    const scaffold = vi.fn().mockImplementation(async (opts) => {
-      // Simulate what create-next-app would produce: at minimum the project dir.
-      await mkdir(join(opts.parentDir, opts.projectName), { recursive: true });
-      await writeFile(
-        join(opts.parentDir, opts.projectName, 'package.json'),
-        JSON.stringify({ name: opts.projectName }),
-        'utf8',
-      );
-    });
-    const llm = stubLlm(sampleSpec);
+  it('runs LLM stack recommendation + tech-spec generation, calls runScaffold, and writes the .ai/ folder', async () => {
+    const scaffold = vi
+      .fn()
+      .mockImplementation(async (opts: RunScaffoldOptions): Promise<RunScaffoldResult> => {
+        await mkdir(opts.projectDir, { recursive: true });
+        await writeFile(
+          join(opts.projectDir, 'package.json'),
+          JSON.stringify({ name: opts.projectName }),
+          'utf8',
+        );
+        return {
+          ok: true,
+          plan: samplePlan,
+          attempts: [
+            {
+              attempt: 1,
+              plan: samplePlan,
+              appliedSteps: 1,
+              verification: { ok: true, failedPostConditions: [], notes: '' },
+              commandFailure: null,
+            },
+          ],
+        };
+      });
+    const llm = stubLlm([sampleRecommendations, sampleSpec]);
 
     const result = await spexNewToolDefinition.handle(
       {
@@ -112,12 +159,47 @@ describe('spexNewToolDefinition', () => {
 
     expect(scaffold).toHaveBeenCalledTimes(1);
     expect(scaffold).toHaveBeenCalledWith(
-      expect.objectContaining({ projectName: 'demo-app', parentDir, stdio: 'pipe' }),
+      expect.objectContaining({ projectName: 'demo-app', parentDir }),
     );
 
-    // .ai/ files exist with the spec the LLM produced
     const yaml = await readFile(join(parentDir, 'demo-app', '.ai', 'tech-spec.yaml'), 'utf8');
     expect(parseYaml(yaml)).toEqual(sampleSpec);
+  });
+
+  it('honors an explicit `stack` input by tagging the decision source as user-chosen', async () => {
+    const scaffold = vi
+      .fn()
+      .mockImplementation(async (opts: RunScaffoldOptions): Promise<RunScaffoldResult> => {
+        await mkdir(opts.projectDir, { recursive: true });
+        return {
+          ok: true,
+          plan: samplePlan,
+          attempts: [
+            {
+              attempt: 1,
+              plan: samplePlan,
+              appliedSteps: 1,
+              verification: { ok: true, failedPostConditions: [], notes: '' },
+              commandFailure: null,
+            },
+          ],
+        };
+      });
+    const llm = stubLlm([sampleRecommendations, sampleSpec]);
+
+    await spexNewToolDefinition.handle(
+      {
+        name: 'demo-app',
+        project_type: 'internal admin tool',
+        stack: 'SvelteKit + Drizzle + Turso',
+        parent_dir: parentDir,
+      },
+      { llm, scaffold },
+    );
+
+    const scaffoldCall = scaffold.mock.calls[0]?.[0] as RunScaffoldOptions;
+    expect(scaffoldCall.decision.source).toBe('user');
+    expect(scaffoldCall.decision.rationale).toContain('SvelteKit + Drizzle + Turso');
   });
 
   it('surfaces LLM errors as isError', async () => {
@@ -129,13 +211,18 @@ describe('spexNewToolDefinition', () => {
       { llm, scaffold: vi.fn() },
     );
     expect(result.isError).toBe(true);
-    expect(parseTextPayload(result.content?.[0]).message).toContain('Tech-spec generation failed');
+    expect(parseTextPayload(result.content?.[0]).message).toContain('Stack selection failed');
   });
 });
 
-function stubLlm(spec: TechSpec): LLMProvider {
+function stubLlm(responses: unknown[]): LLMProvider {
+  let i = 0;
   return {
-    generateStructured: vi.fn().mockResolvedValue(spec),
+    generateStructured: vi.fn(async () => {
+      const next = responses[i++];
+      if (next === undefined) throw new Error('stub LLM exhausted');
+      return next as never;
+    }),
   };
 }
 

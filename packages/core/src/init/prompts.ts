@@ -3,23 +3,20 @@ import type { DetectedStack } from './detect-stack.js';
 
 export const INIT_TECH_SPEC_SYSTEM_PROMPT = `You are SPEX, a technical architect that produces concrete, opinionated tech specs for EXISTING projects.
 
-Your task is to produce a TechSpec describing an existing Next.js + TypeScript project, based on detected stack facts and the user's discovery answers.
+Your task is to produce a TechSpec describing an existing project, based on detected stack facts and the user's discovery answers.
 
 Rules:
-- The framework, language, version, styling, and app_router fields MUST be taken from the detected stack provided in the user message. Do NOT fabricate or override them.
-- scaffolding_plan.commands MUST contain exactly one documentary placeholder: "pnpm install  # project already scaffolded"
+- stack.label is a short human-readable summary of the detected stack, e.g. "Next.js 15 App Router + Tailwind".
+- stack.source MUST be "recommended" (the stack was inferred from existing code, not user-typed or brainstormed).
+- stack.components MUST include one entry per detected fact (framework, language, styling, etc.), each with a clear role/choice/rationale.
+- stack.tradeoffs and stack.validation_warnings are empty arrays for existing projects (we report what we found, we do not re-evaluate).
 - The rationale field MUST explain, in at least two sentences (50+ characters), the architectural choices in the existing project and why they fit the described use case.
 - Set version to 1.
-- Set stack.language to "typescript".
-- Set stack.frontend.framework to "nextjs".
-- Set stack.frontend.app_router using the detected boolean value.
-- Set stack.frontend.version using the detected value.
-- Set stack.frontend.styling using the detected value.
 - Set the inference block:
   - inferred: true
   - inferred_fields: copy verbatim the list of dotted-path field names provided in the user message under "Inferred fields"
   - notes: a single sentence summarising which areas came from the existing project versus the user's answers
-- Be specific. Do not hedge. Do not propose alternatives.`;
+- Do not fabricate or override the detected facts. Be specific. Do not hedge.`;
 
 export function buildInitTechSpecUserPrompt(opts: {
   projectName: string;
@@ -59,10 +56,4 @@ ${formattedAnswers}
 Produce a TechSpec for this existing project.`;
 }
 
-export const INIT_INFERRED_FIELDS: readonly string[] = [
-  'stack.language',
-  'stack.frontend.framework',
-  'stack.frontend.version',
-  'stack.frontend.styling',
-  'stack.frontend.app_router',
-];
+export const INIT_INFERRED_FIELDS: readonly string[] = ['stack.label', 'stack.components'];

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { StackComponentSchema, StackDecisionSourceSchema } from './stack-recommendation.js';
 
 export const TechSpecInferenceSchema = z.object({
   inferred: z.literal(true),
@@ -7,6 +8,15 @@ export const TechSpecInferenceSchema = z.object({
 });
 
 export type TechSpecInference = z.infer<typeof TechSpecInferenceSchema>;
+
+export const TechSpecStackSchema = z.object({
+  label: z.string().min(1),
+  source: StackDecisionSourceSchema,
+  components: z.array(StackComponentSchema).min(1),
+  tradeoffs: z.array(z.string()),
+  validation_warnings: z.array(z.string()),
+});
+export type TechSpecStack = z.infer<typeof TechSpecStackSchema>;
 
 export const TechSpecSchema = z.object({
   version: z.literal(1),
@@ -24,20 +34,7 @@ export const TechSpecSchema = z.object({
     data_persistence: z.string(),
   }),
 
-  stack: z.object({
-    language: z.literal('typescript'),
-    frontend: z.object({
-      framework: z.literal('nextjs'),
-      version: z.string(),
-      styling: z.string(),
-      app_router: z.boolean(),
-    }),
-  }),
-
-  scaffolding_plan: z.object({
-    commands: z.array(z.string()).min(1),
-    post_install_files: z.array(z.string()).optional(),
-  }),
+  stack: TechSpecStackSchema,
 
   rationale: z.string().min(50),
 

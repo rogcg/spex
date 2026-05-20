@@ -18,10 +18,15 @@ const techSpec = {
     data_persistence: 'Simple key-value',
   },
   stack: {
-    language: 'typescript',
-    frontend: { framework: 'nextjs', version: '15', styling: 'tailwindcss', app_router: true },
+    label: 'Next.js 15 App Router + Tailwind',
+    source: 'recommended',
+    components: [
+      { role: 'framework', choice: 'Next.js 15 App Router', rationale: 'SSR web app' },
+      { role: 'styling', choice: 'Tailwind CSS', rationale: 'Styling' },
+    ],
+    tradeoffs: [],
+    validation_warnings: [],
   },
-  scaffolding_plan: { commands: ['pnpm install  # already scaffolded'] },
   rationale: 'Next.js App Router with Tailwind for a small internal tool — straightforward DX.',
 };
 

@@ -1,5 +1,5 @@
 import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
-import type { LLMProvider, ScaffoldNextJsAppOptions } from '@spex/core';
+import type { LLMProvider, RunScaffoldOptions, RunScaffoldResult } from '@spex/core';
 
 /**
  * Optional dependency overrides for tests. Real invocations construct the
@@ -11,7 +11,7 @@ import type { LLMProvider, ScaffoldNextJsAppOptions } from '@spex/core';
  */
 export interface ToolDependencies {
   llm?: LLMProvider;
-  scaffold?: (options: ScaffoldNextJsAppOptions) => Promise<void>;
+  scaffold?: (options: RunScaffoldOptions) => Promise<RunScaffoldResult>;
   /**
    * Override the root directory for skill discovery. Forwarded to
    * `@spex/skills`'s `loadSkills`. Defaults to the bundled @spex/skills root.

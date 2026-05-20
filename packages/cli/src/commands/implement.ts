@@ -376,7 +376,7 @@ function buildContextSummary(context: CodebaseContext): {
   patterns: string;
 } {
   const framework = context.techSpec
-    ? `${context.techSpec.stack.frontend.framework} ${context.techSpec.stack.frontend.version} (${context.techSpec.stack.frontend.styling})`
+    ? context.techSpec.stack.label
     : '(no tech spec — using package.json and detection only)';
   const patterns = `naming=${context.detectedPatterns.fileNamingConvention}, components=${context.detectedPatterns.componentStructure}, tests=${context.detectedPatterns.testingPattern}`;
   return {

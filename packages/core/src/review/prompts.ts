@@ -122,10 +122,12 @@ function formatFeatureSpec(spec: FeatureSpec): string {
 }
 
 function formatTechSpec(spec: TechSpec): string {
+  const components = spec.stack.components.map((c) => `${c.role}=${c.choice}`).join(', ');
   return [
     `project.name: ${spec.project.name}`,
     `project.type: ${spec.project.type}`,
-    `stack.frontend: ${spec.stack.frontend.framework} ${spec.stack.frontend.version} (${spec.stack.frontend.styling})`,
+    `stack.label: ${spec.stack.label}`,
+    `stack.components: ${components}`,
   ].join('\n');
 }
 

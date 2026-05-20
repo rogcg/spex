@@ -15,35 +15,23 @@ const validSpec = {
     data_persistence: 'Relational database',
   },
   stack: {
-    language: 'typescript',
-    frontend: {
-      framework: 'nextjs',
-      version: '15',
-      styling: 'tailwindcss',
-      app_router: true,
-    },
-  },
-  scaffolding_plan: {
-    commands: ['pnpm create next-app@latest my-saas --typescript --tailwind --app --src-dir'],
+    label: 'Next.js + Postgres + Drizzle',
+    source: 'recommended' as const,
+    components: [
+      { role: 'framework', choice: 'Next.js 15 App Router', rationale: 'SSR web app' },
+      { role: 'database', choice: 'Postgres', rationale: 'Relational persistence' },
+      { role: 'orm', choice: 'Drizzle', rationale: 'Type-safe SQL' },
+    ],
+    tradeoffs: ['Vendor coupling to Vercel'],
+    validation_warnings: [],
   },
   rationale:
     'Chose Next.js with App Router for first-class TypeScript support, server components, and a strong DX for SaaS applications.',
 };
 
 describe('TechSpecSchema', () => {
-  it('accepts a valid tech spec', () => {
+  it('accepts a valid tech spec with a generic stack section', () => {
     const result = TechSpecSchema.safeParse(validSpec);
-    expect(result.success).toBe(true);
-  });
-
-  it('accepts an optional post_install_files field', () => {
-    const result = TechSpecSchema.safeParse({
-      ...validSpec,
-      scaffolding_plan: {
-        commands: validSpec.scaffolding_plan.commands,
-        post_install_files: ['.ai/tech-spec.yaml', '.ai/README.md'],
-      },
-    });
     expect(result.success).toBe(true);
   });
 
@@ -60,31 +48,54 @@ describe('TechSpecSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects when stack.language is not "typescript"', () => {
+  it('rejects when stack.label is empty', () => {
     const result = TechSpecSchema.safeParse({
       ...validSpec,
-      stack: { ...validSpec.stack, language: 'javascript' },
+      stack: { ...validSpec.stack, label: '' },
     });
     expect(result.success).toBe(false);
   });
 
-  it('rejects when stack.frontend.framework is not "nextjs"', () => {
+  it('rejects when stack.source is not one of the allowed values', () => {
+    const result = TechSpecSchema.safeParse({
+      ...validSpec,
+      stack: { ...validSpec.stack, source: 'guessed' },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects when stack has no components', () => {
+    const result = TechSpecSchema.safeParse({
+      ...validSpec,
+      stack: { ...validSpec.stack, components: [] },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects when a stack component is missing a rationale', () => {
     const result = TechSpecSchema.safeParse({
       ...validSpec,
       stack: {
         ...validSpec.stack,
-        frontend: { ...validSpec.stack.frontend, framework: 'remix' },
+        components: [{ role: 'framework', choice: 'Next.js' }],
       },
     });
     expect(result.success).toBe(false);
   });
 
-  it('rejects when scaffolding_plan.commands is empty', () => {
+  it('accepts any framework — no fixed catalog', () => {
     const result = TechSpecSchema.safeParse({
       ...validSpec,
-      scaffolding_plan: { commands: [] },
+      stack: {
+        ...validSpec.stack,
+        label: 'SvelteKit + Drizzle + Turso',
+        components: [
+          { role: 'framework', choice: 'SvelteKit', rationale: 'Lightweight web stack' },
+          { role: 'database', choice: 'Turso (libSQL)', rationale: 'Edge SQLite' },
+        ],
+      },
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it('rejects when rationale is shorter than 50 characters', () => {
@@ -101,23 +112,12 @@ describe('TechSpecSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects when stack.frontend.app_router is not a boolean', () => {
-    const result = TechSpecSchema.safeParse({
-      ...validSpec,
-      stack: {
-        ...validSpec.stack,
-        frontend: { ...validSpec.stack.frontend, app_router: 'true' },
-      },
-    });
-    expect(result.success).toBe(false);
-  });
-
   it('accepts an inference block flagging inferred fields', () => {
     const result = TechSpecSchema.safeParse({
       ...validSpec,
       inference: {
         inferred: true,
-        inferred_fields: ['stack.frontend.version', 'stack.frontend.styling'],
+        inferred_fields: ['stack.components[0].version'],
         notes: 'Detected from package.json',
       },
     });
@@ -140,7 +140,7 @@ describe('TechSpecSchema', () => {
       ...validSpec,
       inference: {
         inferred: false,
-        inferred_fields: ['stack.frontend.version'],
+        inferred_fields: ['stack.components[0].version'],
       },
     });
     expect(result.success).toBe(false);

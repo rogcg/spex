@@ -35,7 +35,7 @@ The CLI entry point is then `node packages/cli/dist/index.js`. To use it like a 
 pnpm --filter @spex/cli link --global
 ```
 
-To pin to a specific release, check out a tag before building (e.g. `git checkout v0.9.0`). An `npm install -g spex` install is not available yet.
+To pin to a specific release, check out a tag before building (e.g. `git checkout v0.10.0`). An `npm install -g spex` install is not available yet.
 
 ### Create a new project — `spex new`
 
@@ -43,12 +43,19 @@ To pin to a specific release, check out a tag before building (e.g. `git checkou
 ANTHROPIC_API_KEY=sk-... node packages/cli/dist/index.js new my-saas
 ```
 
+Optional flags:
+
+- `--stack "Next.js + Postgres + Drizzle"` — honor an explicit user choice (validation warnings are surfaced but do not block).
+- `--constraints "must use Postgres"` — pass hard constraints to the recommender.
+- `--brainstorm` — open a multi-round brainstorm to converge on a stack collaboratively.
+
 1. Run discovery — a static 5-question flow by default. An adaptive architect-driven flow is also available via the library API; see [Adaptive discovery](#adaptive-discovery) below.
-2. Generate a `tech-spec.yaml` via Claude.
-3. Show the spec and ask for approval.
-4. Scaffold a Next.js application via `create-next-app`.
-5. Inject `.ai/tech-spec.yaml` and `.ai/README.md` into the new project.
-6. Record the `.ai/` folder in a git commit.
+2. Select a stack: the AI recommends best-fit stacks from the discovery profile (or honors `--stack` / `--constraints`). No hardcoded catalog — recommendations are reasoned per-profile and ranked with confidence + tradeoffs. The committed decision records its source (`recommended | user | brainstormed`) in the tech-spec.
+3. Generate a `tech-spec.yaml` via Claude, packaging the committed decision.
+4. Show the spec and ask for approval.
+5. Plan the scaffold dynamically (any stack, not just Next.js). Execute the plan and verify it (file/dependency/typecheck/build checks). On verification failure, Claude repairs the plan and we retry, bounded to 3 attempts.
+6. Inject `.ai/tech-spec.yaml` and `.ai/README.md` into the new project.
+7. Record the `.ai/` folder in a git commit.
 
 ### Add SPEX to an existing project — `spex init`
 

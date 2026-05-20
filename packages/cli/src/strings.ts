@@ -7,6 +7,11 @@ export const STRINGS = {
   newCommand: {
     description: 'Create a new SPEX-managed project',
     argDescription: 'project name (lowercase letters, numbers, dashes)',
+    stackFlagDescription:
+      'explicit stack choice (e.g. "Next.js + Postgres + Drizzle") — flagged as user-chosen',
+    constraintsFlagDescription:
+      'hard constraints honored by the recommender (e.g. "must use Postgres")',
+    brainstormFlagDescription: 'open a brainstorm session to converge on a stack collaboratively',
 
     aboutToCreate: (name: string) => `About to create a new project: ${name}`,
     confirmProjectName: (name: string) => `Create project "${name}"?`,
@@ -14,17 +19,53 @@ export const STRINGS = {
 
     discoveryHeader: "\nLet's understand your project. A few quick questions:\n",
 
+    selectingStackHeader: '\nSelecting a stack...',
+
     generatingSpec: '\nGenerating tech spec via Claude...',
     specReady: '\n=== Generated tech-spec.yaml ===\n',
     specReadyFooter: '=== end of tech-spec.yaml ===\n',
     confirmApproveSpec: 'Approve this tech spec and proceed with scaffolding?',
 
-    scaffolding: (name: string) => `\nScaffolding ${name} with create-next-app...`,
+    planningScaffold: '\nPlanning scaffold via Claude...',
+    scaffoldPlanPreview: '\n=== Scaffold plan ===\n',
+    scaffoldPlanPreviewEnd: '=== end of scaffold plan ===\n',
+    confirmApproveScaffoldPlan: 'Approve this scaffold plan and execute it?',
+
+    scaffolding: (name: string) => `\nScaffolding ${name}...`,
+    scaffoldAttempt: (n: number, max: number) => `\n  Scaffold attempt ${n}/${max}...`,
+    scaffoldAttemptOk: '  ✓ scaffold succeeded',
+    scaffoldVerificationFailed: (reason: string) => `  ✗ verification failed: ${reason}`,
+    scaffoldSelfCorrecting: '  ↻ asking Claude to repair the plan...',
+    scaffoldFinalFailure: (attempts: number) =>
+      `\nError: scaffold failed after ${attempts} attempt(s). See diagnostics above. Aborting and rolling back the project directory.`,
+
     injectingAi: 'Writing .ai/ folder...',
     gitInit: 'Recording .ai/ folder in git...',
 
     success: (name: string, dir: string) =>
       `\nProject "${name}" created at:\n  ${dir}\n\nNext steps:\n  cd ${name}\n  pnpm dev\n`,
+  },
+
+  stackSelection: {
+    recommending: '\nGenerating stack recommendations via Claude...',
+    respectingConstraints: (constraints: string) =>
+      `\nGenerating stack recommendations (honoring constraints: ${constraints})...`,
+    validatingExplicitChoice: (choice: string) =>
+      `\nValidating your stack choice (${choice}) against the application profile...`,
+    recommendationsHeader: (count: number) => `\n=== ${count} recommendation(s) ===`,
+    unmappedHeader: '\nRequirements no recommendation could address:',
+    validationWarningsHeader: '\nValidation warnings for your choice:',
+    userOverrodeWarnings: '  User accepted the choice despite warnings — logged in tech-spec.',
+    pickPrompt: 'Pick a recommendation (or brainstorm):',
+    brainstormChoice: '[brainstorm] discuss options before committing',
+    brainstormStart: '\n=== Brainstorm session ===',
+    brainstormRoundHeader: (n: number) => `\nProposal #${n}:`,
+    brainstormReply: 'Your reply:',
+    brainstormAccept: 'Accept this proposal',
+    brainstormRefine: 'Refine — provide feedback',
+    brainstormFeedbackPrompt: 'What should change about this proposal?',
+    confirmOverride: (n: number) =>
+      `Proceed anyway despite ${n} validation warning${n === 1 ? '' : 's'}?`,
   },
 
   initCommand: {

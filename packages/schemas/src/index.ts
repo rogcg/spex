@@ -1,8 +1,10 @@
 export {
   TechSpecSchema,
   TechSpecInferenceSchema,
+  TechSpecStackSchema,
   type TechSpec,
   type TechSpecInference,
+  type TechSpecStack,
 } from './tech-spec.js';
 export {
   FEATURE_SLUG_PATTERN,
@@ -113,3 +115,27 @@ export {
   type ReviewSection,
   type ReviewSeverity,
 } from './review-result.js';
+export {
+  StackComponentSchema,
+  StackConfidenceSchema,
+  StackDecisionSchema,
+  StackDecisionSourceSchema,
+  StackRecommendationSchema,
+  StackRecommendationsSchema,
+  type StackComponent,
+  type StackConfidence,
+  type StackDecision,
+  type StackDecisionSource,
+  type StackRecommendation,
+  type StackRecommendations,
+} from './stack-recommendation.js';
+export {
+  ScaffoldCommandStepSchema,
+  ScaffoldFileStepSchema,
+  ScaffoldPlanSchema,
+  ScaffoldStepSchema,
+  type ScaffoldCommandStep,
+  type ScaffoldFileStep,
+  type ScaffoldPlan,
+  type ScaffoldStep,
+} from './scaffold-plan.js';

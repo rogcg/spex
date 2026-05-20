@@ -40,18 +40,14 @@ const techSpec = {
     data_persistence: 'Relational database',
   },
   stack: {
-    language: 'typescript',
-    frontend: {
-      framework: 'nextjs',
-      version: '15',
-      styling: 'tailwindcss',
-      app_router: true,
-    },
-  },
-  scaffolding_plan: {
-    commands: [
-      'pnpm create next-app@latest demo-app --typescript --tailwind --app --src-dir --import-alias "@/*" --use-pnpm',
+    label: 'Next.js 15 App Router + Tailwind',
+    source: 'recommended',
+    components: [
+      { role: 'framework', choice: 'Next.js 15 App Router', rationale: 'SSR web app' },
+      { role: 'styling', choice: 'Tailwind CSS', rationale: 'Rapid styling' },
     ],
+    tradeoffs: [],
+    validation_warnings: [],
   },
   rationale:
     'Next.js with App Router and Tailwind provides a strong DX and supports server components for this internal admin tool.',

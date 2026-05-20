@@ -34,14 +34,23 @@ program
   .command('new')
   .description(STRINGS.newCommand.description)
   .argument('<name>', STRINGS.newCommand.argDescription)
-  .action(async (name: string) => {
-    printBanner();
-    try {
-      await runNewCommand(name);
-    } catch (error) {
-      handleError(error);
-    }
-  });
+  .option('--stack <label>', STRINGS.newCommand.stackFlagDescription)
+  .option('--constraints <text>', STRINGS.newCommand.constraintsFlagDescription)
+  .option('--brainstorm', STRINGS.newCommand.brainstormFlagDescription)
+  .action(
+    async (name: string, opts: { stack?: string; constraints?: string; brainstorm?: boolean }) => {
+      printBanner();
+      try {
+        await runNewCommand(name, {
+          ...(opts.stack ? { stack: opts.stack } : {}),
+          ...(opts.constraints ? { constraints: opts.constraints } : {}),
+          ...(opts.brainstorm ? { brainstorm: true } : {}),
+        });
+      } catch (error) {
+        handleError(error);
+      }
+    },
+  );
 
 program
   .command('init')

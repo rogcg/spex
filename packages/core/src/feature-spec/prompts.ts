@@ -49,12 +49,13 @@ function formatTechSpec(ctx: CodebaseContext): string {
     return '### Tech spec\n(no .ai/tech-spec.yaml present)';
   }
   const { project, stack } = ctx.techSpec;
+  const componentLines = stack.components.map((c) => `  - ${c.role}: ${c.choice}`).join('\n');
   return `### Tech spec
 - project: ${project.name} (${project.type})
 - description: ${project.description}
-- language: ${stack.language}
-- framework: ${stack.frontend.framework} ${stack.frontend.version} (App Router: ${stack.frontend.app_router})
-- styling: ${stack.frontend.styling}`;
+- stack: ${stack.label} (source: ${stack.source})
+- components:
+${componentLines}`;
 }
 
 function formatPackageInfo(ctx: CodebaseContext): string {

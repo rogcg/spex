@@ -9,6 +9,102 @@ While SPEX is on `0.x`, any minor release may contain breaking changes to CLI
 flags, `.ai/` artifact formats, MCP tool shapes, or schema definitions. Pin to
 a specific version (or commit SHA, until npm publish) if you need stability.
 
+## [0.10.0] — 2026-05-20
+
+### Added — Adaptive stack selection
+
+- **Stack recommendation engine** (`@spex/core` `recommendStack`). The AI
+  reasons from the application profile produced by discovery and returns a
+  ranked `StackRecommendations` set (primary + alternatives). Each
+  recommendation carries components (framework, db, ORM, styling, hosting,
+  etc.) with per-component rationale tied to specific requirements, an
+  explicit tradeoffs list, a confidence rating, and the requirements it
+  covers / could not address. No hardcoded catalog — recommendations are
+  generated per-profile and renormalized to stable ranks.
+- **Brainstorm & selection flow** (`@spex/cli` `runStackSelection`).
+  Three entry states are accepted:
+  - **No preference** → recommend + user picks (or jumps to brainstorm).
+  - **Partial constraints** (`--constraints "must use Postgres"`) →
+    constraint forwarded to the engine and embedded in the rationale.
+  - **Explicit choice** (`--stack "Next.js + Supabase"`) → validated
+    against the profile; warnings surface but the choice is permitted with
+    explicit user override (recorded in `stack.validation_warnings`).
+  - **Brainstorm** (`--brainstorm`) → bounded multi-round loop
+    (default 5 rounds) where prior proposals + feedback feed the next
+    recommendation. Aborts cleanly if it does not converge.
+- **Dynamic scaffold planner** (`@spex/core` `planScaffold`,
+  `repairScaffoldPlan`). Turns a committed `StackDecision` into a
+  reviewable `ScaffoldPlan` — a discriminated union of `command` steps
+  (executed via execa) and `file` steps (write a path under the project
+  directory). Plans declare `postConditions` that the verifier checks
+  empirically. Repair takes a previous plan plus failure context and
+  produces a revised plan; the repair prompt forbids verbatim re-runs of
+  the failing step. The Next.js `pnpm create next-app@latest …` command
+  is reproducible (Sprint 1 regression guard).
+- **Scaffold executor** (`@spex/core` `executeScaffoldPlan`). Runs the
+  first command in the parent directory, subsequent commands inside the
+  project directory; rejects file paths that escape the project root
+  with `UnsafeScaffoldPathError`. Stops at the first failing step and
+  returns a failure record (does not throw on command-level failures so
+  callers can drive self-correction).
+- **Verifier** (`@spex/core` `verifyScaffold`). Each `postCondition`
+  string is matched against a small catalog of empirical checks: file
+  existence (`<path> exists`), dependency declaration in `package.json`
+  (`package.json declares '<name>' dependency`), and stack-appropriate
+  smoke commands (typecheck via `pnpm exec tsc --noEmit`, build via
+  `pnpm run build`, install via `pnpm install`). Unrecognized
+  post-conditions are treated as informational rather than failing.
+- **Self-correction runner** (`@spex/core` `runScaffold`). Drives
+  `planScaffold → executeScaffoldPlan → verifyScaffold` in a bounded
+  loop (default 3 attempts), regenerates the plan via
+  `repairScaffoldPlan` between attempts, and cleans the project
+  directory between attempts so each retry starts from a clean state.
+  Emits a structured event stream (`planning`, `attempt-start`,
+  `attempt-failed`, `repairing`, `attempt-ok`, `aborting`) consumed by
+  the CLI to render progress. Throws `ScaffoldFailedError` on final
+  failure; the CLI rolls back the project directory.
+- **`spex new` CLI integration.** New flags: `--stack <label>`,
+  `--constraints <text>`, `--brainstorm`. The end-to-end flow is now
+  discovery → `recommendStack` → user selection → `generateTechSpec`
+  with the committed decision → user approval → `planScaffold` →
+  `runScaffold` (execute + verify + self-correct) → `.ai/` injection
+  → git init. A `ScaffoldFailedError` cleanly removes the project
+  directory rather than leaving a half-scaffolded tree.
+- **`spex_new` MCP tool integration.** Accepts an optional `stack`
+  argument for non-interactive explicit choices. The recommender's
+  top-ranked stack is selected automatically when `stack` is omitted.
+  Tagged the decision source (`recommended` vs `user`) is round-tripped
+  through the tech-spec.
+
+### Changed — TechSpec schema generalized
+
+- `TechSpec.stack` no longer hardcodes `language: typescript` and
+  `frontend: { framework: nextjs, … }`. It is now `{ label, source,
+  components: StackComponent[], tradeoffs, validation_warnings }`,
+  validated by the new `TechSpecStackSchema`. `source` is one of
+  `recommended | user | brainstormed` and is round-tripped from the
+  selection flow's committed `StackDecision`.
+- `TechSpec.scaffolding_plan` removed — scaffolding is now described by
+  the separate `ScaffoldPlan` produced just-in-time by the dynamic
+  planner. Existing `.ai/tech-spec.yaml` files written by 0.9.x must be
+  regenerated.
+- `generateTechSpec` now requires a `decision: StackDecision` and
+  packages it into the spec rather than choosing the stack itself.
+- `INIT_INFERRED_FIELDS` collapsed to `stack.label` + `stack.components`
+  for `spex init` against existing projects; the field is no longer
+  Next.js-specific.
+
+### Added — Schemas
+
+- `StackComponentSchema`, `StackConfidenceSchema`,
+  `StackDecisionSchema`, `StackDecisionSourceSchema`,
+  `StackRecommendationSchema`, `StackRecommendationsSchema` exported
+  from `@spex/schemas`.
+- `ScaffoldCommandStepSchema`, `ScaffoldFileStepSchema`,
+  `ScaffoldStepSchema`, `ScaffoldPlanSchema` exported from
+  `@spex/schemas`.
+- `TechSpecStackSchema` exported from `@spex/schemas`.
+
 ## [0.9.0] — 2026-05-20
 
 ### Added — Adaptive discovery

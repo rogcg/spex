@@ -21,18 +21,14 @@ const validSpec = {
     data_persistence: 'Simple key-value',
   },
   stack: {
-    language: 'typescript',
-    frontend: {
-      framework: 'nextjs',
-      version: '15',
-      styling: 'tailwindcss',
-      app_router: true,
-    },
-  },
-  scaffolding_plan: {
-    commands: [
-      'pnpm create next-app@latest demo --typescript --tailwind --app --src-dir --import-alias "@/*" --use-pnpm',
+    label: 'Next.js 15 App Router + Tailwind',
+    source: 'recommended',
+    components: [
+      { role: 'framework', choice: 'Next.js 15 App Router', rationale: 'SSR web app' },
+      { role: 'styling', choice: 'Tailwind CSS', rationale: 'Rapid styling' },
     ],
+    tradeoffs: [],
+    validation_warnings: [],
   },
   rationale:
     'Next.js with App Router provides a strong DX and supports server components for this internal tool.',
@@ -79,7 +75,7 @@ describe('loadTechSpec', () => {
       ...validSpec,
       inference: {
         inferred: true,
-        inferred_fields: ['stack.frontend.version'],
+        inferred_fields: ['stack.label', 'stack.components'],
         notes: 'Detected from package.json',
       },
     };

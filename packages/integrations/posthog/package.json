@@ -1,6 +1,6 @@
 {
   "name": "@spex/integrations-posthog",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "description": "PostHog integration for SPEX — MCP client wrapper for the official PostHog MCP server (error tracking, events, session recordings)",
   "license": "MIT",

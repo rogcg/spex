@@ -1,8 +1,22 @@
-import { type TechSpec, TechSpecSchema } from '@spex/schemas';
+import type { StackDecision, TechSpec } from '@spex/schemas';
+import { TechSpecSchema } from '@spex/schemas';
 import { describe, expect, it, vi } from 'vitest';
 import type { LLMProvider } from '../llm/provider.js';
 import { generateTechSpec } from './generator.js';
 import { TECH_SPEC_SYSTEM_PROMPT } from './prompts.js';
+
+const sampleDecision: StackDecision = {
+  label: 'Next.js + Postgres + Drizzle',
+  source: 'recommended',
+  components: [
+    { role: 'framework', choice: 'Next.js 15 App Router', rationale: 'SSR web app' },
+    { role: 'database', choice: 'Postgres', rationale: 'Relational persistence' },
+    { role: 'orm', choice: 'Drizzle', rationale: 'Type-safe SQL' },
+  ],
+  rationale: 'Best fit for a TypeScript SaaS with relational data.',
+  tradeoffs: ['Vendor coupling to Vercel for previews'],
+  validationWarnings: [],
+};
 
 const sampleSpec: TechSpec = {
   version: 1,
@@ -18,21 +32,14 @@ const sampleSpec: TechSpec = {
     data_persistence: 'Simple key-value',
   },
   stack: {
-    language: 'typescript',
-    frontend: {
-      framework: 'nextjs',
-      version: '15',
-      styling: 'tailwindcss',
-      app_router: true,
-    },
-  },
-  scaffolding_plan: {
-    commands: [
-      'pnpm create next-app@latest demo --typescript --tailwind --app --src-dir --import-alias "@/*" --use-pnpm',
-    ],
+    label: sampleDecision.label,
+    source: sampleDecision.source,
+    components: sampleDecision.components,
+    tradeoffs: sampleDecision.tradeoffs,
+    validation_warnings: sampleDecision.validationWarnings,
   },
   rationale:
-    'Next.js with App Router gives us streaming SSR and a strong DX for this developer-facing tool.',
+    'Next.js with App Router gives us streaming SSR and a strong DX for this developer-facing tool. Postgres + Drizzle keeps persistence type-safe.',
 };
 
 describe('generateTechSpec', () => {
@@ -47,6 +54,7 @@ describe('generateTechSpec', () => {
         project_type: 'developer tool',
         primary_users: 'Developers',
       },
+      decision: sampleDecision,
     });
 
     expect(result).toEqual(sampleSpec);
@@ -59,6 +67,8 @@ describe('generateTechSpec', () => {
     expect(call.userPrompt).toContain('Project name: demo');
     expect(call.userPrompt).toContain('- project_type: developer tool');
     expect(call.userPrompt).toContain('- primary_users: Developers');
+    expect(call.userPrompt).toContain('Next.js + Postgres + Drizzle');
+    expect(call.userPrompt).toContain('source: recommended');
   });
 
   it('returns the value resolved by the LLM provider unchanged', async () => {
@@ -70,6 +80,7 @@ describe('generateTechSpec', () => {
       llm,
       projectName: 'demo',
       answers: { project_type: 'x' },
+      decision: sampleDecision,
     });
 
     expect(result).toBe(sampleSpec);
@@ -80,8 +91,8 @@ describe('generateTechSpec', () => {
       generateStructured: vi.fn().mockRejectedValue(new Error('boom')),
     };
 
-    await expect(generateTechSpec({ llm, projectName: 'demo', answers: {} })).rejects.toThrow(
-      'boom',
-    );
+    await expect(
+      generateTechSpec({ llm, projectName: 'demo', answers: {}, decision: sampleDecision }),
+    ).rejects.toThrow('boom');
   });
 });
