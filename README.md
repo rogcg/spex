@@ -137,9 +137,52 @@ spex skills install                 # default: user scope (~/.claude/skills/)
 spex skills install --scope=project # project scope (./.claude/skills/)
 ```
 
-Copies the SPEX skill bundles into a Claude Code skills directory so the IDE's agent can invoke SPEX workflows by name (`spex-new`, `spex-implement`, `spex-fix`, `spex-review`, `spex-discovery`, `spex-brainstorm`, `spex-architecture-decision`, `spex-adversarial-review`, …). Idempotent — re-running overwrites in place.
+Copies the SPEX skill bundles into a Claude Code skills directory so an agent can invoke SPEX workflows by name. Idempotent — re-running overwrites in place.
 
-Full Skills overview, including the format, the shipped library, and how to author new skills: see [`docs/skills.md`](./docs/skills.md).
+#### Available skills
+
+Two kinds:
+
+- **Routing** — thin markdown that tells the agent which `spex` CLI command (or MCP tool) to invoke.
+- **Prompt-only** — pure methodology, no engine call. The agent follows the document itself.
+
+| Skill | Type | What it does |
+|---|---|---|
+| [`spex-new`](./packages/skills/spex-new/SKILL.md) | Routing | Scaffold a new SPEX-managed project from scratch — runs discovery, generates a TechSpec, scaffolds the chosen stack, writes `.ai/`. |
+| [`spex-init`](./packages/skills/spex-init/SKILL.md) | Routing | Add SPEX's `.ai/` infrastructure to an existing project — detects the stack, asks follow-up questions, writes a retroactive TechSpec. |
+| [`spex-discovery`](./packages/skills/spex-discovery/SKILL.md) | Routing | Run the architect-driven discovery flow — adaptive Q&A, gap detection, navigation commands. |
+| [`spex-implement`](./packages/skills/spex-implement/SKILL.md) | Routing | Implement a feature — read codebase, generate feature spec + plan, apply file ops with approval gates. |
+| [`spex-fix`](./packages/skills/spex-fix/SKILL.md) | Routing | Diagnose a bug and propose + verify a fix — 6-phase pipeline with ranked hypotheses, root cause, fix options, and regression test. |
+| [`spex-review`](./packages/skills/spex-review/SKILL.md) | Routing | Review a GitHub PR against its linked feature spec, project conventions, and security / performance / test coverage. |
+| [`spex-brainstorm`](./packages/skills/spex-brainstorm/SKILL.md) | Prompt-only | Structured divergent-then-convergent ideation — produces a ranked options document. |
+| [`spex-architecture-decision`](./packages/skills/spex-architecture-decision/SKILL.md) | Prompt-only | Walk through an Architecture Decision Record (ADR) — context, alternatives, evaluation, rationale, "when to revisit". |
+| [`spex-adversarial-review`](./packages/skills/spex-adversarial-review/SKILL.md) | Prompt-only | Red-team a spec / PR / plan through four lenses — surface missing context, hidden assumptions, adversarial inputs, hidden coupling. |
+
+#### How to use
+
+1. **Install** the skills:
+
+   ```bash
+   spex skills install
+   ```
+
+2. **Restart** your agent (Claude Code, Cursor, …) so it re-scans the skills directory.
+
+3. **Ask** for what you want. The agent matches your request against each skill's description and follows the chosen one. Examples:
+
+   | You say | Agent picks up |
+   |---|---|
+   | "Help me scope a new SaaS project." | `spex-discovery` |
+   | "Add pagination to the user list." | `spex-implement` |
+   | "Investigate why login fails on emails with `+`." | `spex-fix` |
+   | "Review PR #42." | `spex-review` |
+   | "Brainstorm options for our notification system." | `spex-brainstorm` |
+   | "We're picking between Postgres and DynamoDB — write it up." | `spex-architecture-decision` |
+   | "Red-team this RFC." | `spex-adversarial-review` |
+
+4. **Alternative — no install needed.** When running an MCP-aware client connected to `spex mcp-server`, the agent can call the `list_skills` and `get_skill` tools directly to discover and pull a skill at runtime. See [`docs/mcp-integration.md`](./docs/mcp-integration.md).
+
+Full Skills overview — the format, the loader, how to author new skills: see [`docs/skills.md`](./docs/skills.md).
 
 ## Adaptive discovery
 
