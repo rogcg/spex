@@ -8,9 +8,21 @@ export interface DiscoveryHistoryEntry {
   readonly answer: DiscoveryAnswerValue;
 }
 
+export type GapStatus = 'complete' | 'nice_to_have_missing' | 'critical_missing';
+
+export interface GapAssessment {
+  status: GapStatus;
+  missing: readonly string[];
+  rationale: string;
+}
+
+export type ArchitectStep =
+  | { type: 'question'; question: Question }
+  | { type: 'done'; gap: GapAssessment };
+
 export interface ArchitectAgent {
   seedQuestion(): Question;
-  nextQuestion(history: readonly DiscoveryHistoryEntry[]): Promise<Question | null>;
+  nextStep(history: readonly DiscoveryHistoryEntry[]): Promise<ArchitectStep>;
 }
 
 export interface ArchitectAgentOptions {
@@ -50,11 +62,19 @@ When asking about these well-known concepts, use these exact \`id\` values so th
 
 You may add additional questions with other ids for project-specific context (e.g., \`realtime_features\`, \`integrations_needed\`, \`compliance_constraints\`).
 
-## Stop condition
+## When you are done
 
-Respond with \`{ "done": true }\` when you have gathered enough information to produce a complete TechSpec covering: project type, primary users, expected scale, auth, data persistence, plus any other context relevant to this specific project. Aim for 5-10 questions total.
+When you have asked enough questions, respond with \`{ "done": true, "gap": ... }\` and a gap assessment describing whether anything critical is still missing:
 
-If you are not done, respond with \`{ "done": false, "question": <Question> }\`.`;
+- \`gap.status = "complete"\` — all five standard concept keys are answered, plus any project-specific context relevant to this project. \`gap.missing\` MUST be an empty array.
+- \`gap.status = "nice_to_have_missing"\` — all critical info is present but some helpful context is missing (e.g., target deployment environment). \`gap.missing\` lists the missing items in human-readable form.
+- \`gap.status = "critical_missing"\` — at least one of the five standard concept keys (project_type, primary_users, expected_scale, auth_requirements, data_persistence) was not adequately answered, OR a project-specific concern critical to scaffolding is unknown. \`gap.missing\` lists the missing items in human-readable form.
+
+Always include a \`gap.rationale\` (one or two sentences) explaining your assessment.
+
+If you are not done yet, respond with \`{ "done": false, "question": <Question> }\`.
+
+Aim for 5-10 questions total. Prefer asking a clarifying question over signaling \`critical_missing\` — only choose \`critical_missing\` when continued questioning would not help (e.g., the user has skipped the question or is clearly unable to answer).`;
 
 const QuestionSchema = z
   .object({
@@ -65,6 +85,7 @@ const QuestionSchema = z
     prompt: z.string().min(1),
     type: z.enum(['input', 'select', 'multi-select', 'confirm']),
     choices: z.array(z.string().min(1)).optional(),
+    rationale: z.string().min(1).optional(),
   })
   .refine(
     (q) =>
@@ -73,9 +94,27 @@ const QuestionSchema = z
     { message: 'select and multi-select questions must include at least 2 choices' },
   );
 
-const NextQuestionResponseSchema = z.discriminatedUnion('done', [
-  z.object({ done: z.literal(true) }),
+const GapAssessmentSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('complete'),
+    missing: z.array(z.string().min(1)).length(0),
+    rationale: z.string().min(1),
+  }),
+  z.object({
+    status: z.literal('nice_to_have_missing'),
+    missing: z.array(z.string().min(1)).min(1),
+    rationale: z.string().min(1),
+  }),
+  z.object({
+    status: z.literal('critical_missing'),
+    missing: z.array(z.string().min(1)).min(1),
+    rationale: z.string().min(1),
+  }),
+]);
+
+const NextStepResponseSchema = z.discriminatedUnion('done', [
   z.object({ done: z.literal(false), question: QuestionSchema }),
+  z.object({ done: z.literal(true), gap: GapAssessmentSchema }),
 ]);
 
 export function createArchitectAgent(opts: ArchitectAgentOptions): ArchitectAgent {
@@ -87,36 +126,52 @@ export function createArchitectAgent(opts: ArchitectAgentOptions): ArchitectAgen
 
   return {
     seedQuestion: () => seed,
-    async nextQuestion(history) {
+    async nextStep(history) {
       if (history.length >= maxQuestions) {
-        return null;
+        // Defensive cap reached: treat as done with a "max questions hit" assessment
+        // rather than make another LLM call. The LLM's own done-signal handling
+        // is preferred when it fires earlier.
+        return {
+          type: 'done',
+          gap: {
+            status: 'nice_to_have_missing',
+            missing: [`maxQuestions cap (${maxQuestions}) reached before architect signaled done`],
+            rationale:
+              'The architect reached its defensive question cap without explicitly signaling done. Accepting the current answers as-is.',
+          },
+        };
       }
       const response = await opts.llm.generateStructured({
         systemPrompt: SYSTEM_PROMPT,
         userPrompt: formatHistory(history),
-        schema: NextQuestionResponseSchema,
+        schema: NextStepResponseSchema,
       });
       if (response.done) {
-        return null;
+        return { type: 'done', gap: toGapAssessment(response.gap) };
       }
-      return toQuestion(response.question);
+      return { type: 'question', question: toQuestion(response.question) };
     },
   };
 }
 
-function toQuestion(parsed: z.infer<typeof QuestionSchema>): Question {
-  // The zod-parsed shape has `choices: string[] | undefined`. With
-  // `exactOptionalPropertyTypes`, that does not satisfy Question's optional
-  // `choices?: readonly string[]`. Reassemble explicitly.
-  if (parsed.choices === undefined) {
-    return { id: parsed.id, prompt: parsed.prompt, type: parsed.type };
-  }
+function toGapAssessment(parsed: z.infer<typeof GapAssessmentSchema>): GapAssessment {
   return {
+    status: parsed.status,
+    missing: parsed.missing,
+    rationale: parsed.rationale,
+  };
+}
+
+function toQuestion(parsed: z.infer<typeof QuestionSchema>): Question {
+  const base: Question = {
     id: parsed.id,
     prompt: parsed.prompt,
     type: parsed.type,
-    choices: parsed.choices,
   };
+  if (parsed.choices !== undefined) {
+    return { ...base, choices: parsed.choices };
+  }
+  return base;
 }
 
 function formatHistory(history: readonly DiscoveryHistoryEntry[]): string {
@@ -129,7 +184,9 @@ function formatHistory(history: readonly DiscoveryHistoryEntry[]): string {
     lines.push(`   Answer: ${formatAnswer(entry.answer)}`);
   });
   lines.push('');
-  lines.push('Generate the next question, or signal done if you have enough information.');
+  lines.push(
+    'Generate the next question, or signal done with a gap assessment if you have enough information.',
+  );
   return lines.join('\n');
 }
 

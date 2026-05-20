@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SpexError } from '../errors.js';
-import type { ArchitectAgent } from './architect-agent.js';
+import type { ArchitectAgent, ArchitectStep, GapAssessment } from './architect-agent.js';
 import type { Question } from './questions.js';
 
 const { mockInput, mockSelect, mockCheckbox, mockConfirm } = vi.hoisted(() => ({
@@ -17,7 +17,7 @@ vi.mock('@inquirer/prompts', () => ({
   confirm: mockConfirm,
 }));
 
-const { runDiscovery } = await import('./flow.js');
+const { runDiscovery, runAdaptiveDiscovery } = await import('./flow.js');
 
 describe('runDiscovery (static questions)', () => {
   beforeEach(() => {
@@ -127,7 +127,7 @@ describe('runDiscovery (static questions)', () => {
   });
 });
 
-describe('runDiscovery (architect agent)', () => {
+describe('runAdaptiveDiscovery', () => {
   beforeEach(() => {
     mockInput.mockReset();
     mockSelect.mockReset();
@@ -135,7 +135,21 @@ describe('runDiscovery (architect agent)', () => {
     mockConfirm.mockReset();
   });
 
-  it('drives multiple questions from an ArchitectAgent and stops when nextQuestion returns null', async () => {
+  function makeAgent(seed: Question, steps: ArchitectStep[]): ArchitectAgent {
+    const nextStep = vi.fn<ArchitectAgent['nextStep']>();
+    for (const step of steps) {
+      nextStep.mockResolvedValueOnce(step);
+    }
+    return { seedQuestion: () => seed, nextStep };
+  }
+
+  const completeGap: GapAssessment = {
+    status: 'complete',
+    missing: [],
+    rationale: 'Done.',
+  };
+
+  it('drives multiple questions and returns answers + gap on complete', async () => {
     mockInput.mockResolvedValueOnce('task tracker');
     mockSelect.mockResolvedValueOnce('Consumers (B2C)');
 
@@ -147,73 +161,114 @@ describe('runDiscovery (architect agent)', () => {
       choices: ['Consumers (B2C)', 'Businesses'],
     };
 
-    const nextQuestion = vi
-      .fn<ArchitectAgent['nextQuestion']>()
-      .mockResolvedValueOnce(followUp)
-      .mockResolvedValueOnce(null);
+    const agent = makeAgent(seed, [
+      { type: 'question', question: followUp },
+      { type: 'done', gap: completeGap },
+    ]);
 
-    const agent: ArchitectAgent = {
-      seedQuestion: () => seed,
-      nextQuestion,
-    };
+    const result = await runAdaptiveDiscovery({ agent });
 
-    const answers = await runDiscovery(agent);
-
-    expect(answers).toEqual({
+    expect(result.answers).toEqual({
       project_type: 'task tracker',
       primary_users: 'Consumers (B2C)',
     });
-    expect(nextQuestion).toHaveBeenCalledTimes(2);
-    const firstHistory = nextQuestion.mock.calls[0]?.[0];
-    expect(firstHistory).toEqual([{ question: seed, answer: 'task tracker' }]);
-    const secondHistory = nextQuestion.mock.calls[1]?.[0];
-    expect(secondHistory).toEqual([
-      { question: seed, answer: 'task tracker' },
-      { question: followUp, answer: 'Consumers (B2C)' },
-    ]);
+    expect(result.gap).toEqual(completeGap);
+    expect(result.override).toBeUndefined();
   });
 
   it('returns only the seed answer when the agent immediately signals done', async () => {
     mockInput.mockResolvedValueOnce('just the seed');
-    const agent: ArchitectAgent = {
-      seedQuestion: () => ({ id: 'seed', prompt: '?', type: 'input' }),
-      nextQuestion: vi.fn().mockResolvedValue(null),
-    };
+    const agent = makeAgent({ id: 'seed', prompt: '?', type: 'input' }, [
+      { type: 'done', gap: completeGap },
+    ]);
 
-    const answers = await runDiscovery(agent);
-
-    expect(answers).toEqual({ seed: 'just the seed' });
+    const result = await runAdaptiveDiscovery({ agent });
+    expect(result.answers).toEqual({ seed: 'just the seed' });
+    expect(result.gap).toEqual(completeGap);
   });
 
-  it('preserves multi-select array and confirm boolean answers in the final result', async () => {
+  it('preserves multi-select array and confirm boolean answers', async () => {
     mockInput.mockResolvedValueOnce('app');
     mockCheckbox.mockResolvedValueOnce(['Auth', 'Realtime']);
     mockConfirm.mockResolvedValueOnce(false);
 
-    const agent: ArchitectAgent = {
-      seedQuestion: () => ({ id: 'project_type', prompt: '?', type: 'input' }),
-      nextQuestion: vi
-        .fn<ArchitectAgent['nextQuestion']>()
-        .mockResolvedValueOnce({
+    const agent = makeAgent({ id: 'project_type', prompt: '?', type: 'input' }, [
+      {
+        type: 'question',
+        question: {
           id: 'features',
           prompt: 'Pick features',
           type: 'multi-select',
           choices: ['Auth', 'Realtime', 'Uploads'],
-        })
-        .mockResolvedValueOnce({
-          id: 'needs_db',
-          prompt: 'DB?',
-          type: 'confirm',
-        })
-        .mockResolvedValueOnce(null),
-    };
+        },
+      },
+      { type: 'question', question: { id: 'needs_db', prompt: 'DB?', type: 'confirm' } },
+      { type: 'done', gap: completeGap },
+    ]);
 
-    const answers = await runDiscovery(agent);
+    const result = await runAdaptiveDiscovery({ agent });
 
-    expect(answers).toEqual({
+    expect(result.answers).toEqual({
       project_type: 'app',
       features: ['Auth', 'Realtime'],
       needs_db: false,
     });
+    expect(result.gap.status).toBe('complete');
+  });
+
+  it('returns the nice_to_have_missing gap without prompting the user', async () => {
+    mockInput.mockResolvedValueOnce('app');
+    const niceGap: GapAssessment = {
+      status: 'nice_to_have_missing',
+      missing: ['deployment target'],
+      rationale: 'Core info present.',
+    };
+    const agent = makeAgent({ id: 'project_type', prompt: '?', type: 'input' }, [
+      { type: 'done', gap: niceGap },
+    ]);
+    const confirmHook = vi.fn();
+
+    const result = await runAdaptiveDiscovery({ agent, confirmCriticalGap: confirmHook });
+
+    expect(result.gap).toEqual(niceGap);
+    expect(result.override).toBeUndefined();
+    expect(confirmHook).not.toHaveBeenCalled();
+  });
+
+  it('asks the user via confirmCriticalGap on critical_missing and records override when accepted', async () => {
+    mockInput.mockResolvedValueOnce('app');
+    const criticalGap: GapAssessment = {
+      status: 'critical_missing',
+      missing: ['primary_users'],
+      rationale: 'User skipped this.',
+    };
+    const agent = makeAgent({ id: 'project_type', prompt: '?', type: 'input' }, [
+      { type: 'done', gap: criticalGap },
+    ]);
+    const confirmHook = vi.fn().mockResolvedValueOnce(true);
+
+    const result = await runAdaptiveDiscovery({ agent, confirmCriticalGap: confirmHook });
+
+    expect(confirmHook).toHaveBeenCalledWith(criticalGap);
+    expect(result.gap).toEqual(criticalGap);
+    expect(result.override).toBeDefined();
+    expect(result.override?.acceptedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it('throws SpexError when the user rejects a critical gap', async () => {
+    mockInput.mockResolvedValueOnce('app');
+    const criticalGap: GapAssessment = {
+      status: 'critical_missing',
+      missing: ['primary_users', 'auth_requirements'],
+      rationale: 'Two skipped.',
+    };
+    const agent = makeAgent({ id: 'project_type', prompt: '?', type: 'input' }, [
+      { type: 'done', gap: criticalGap },
+    ]);
+    const confirmHook = vi.fn().mockResolvedValueOnce(false);
+
+    await expect(runAdaptiveDiscovery({ agent, confirmCriticalGap: confirmHook })).rejects.toThrow(
+      SpexError,
+    );
   });
 });

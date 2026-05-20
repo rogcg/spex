@@ -1,6 +1,11 @@
 import { checkbox, confirm, input, select } from '@inquirer/prompts';
 import { SpexError } from '../errors.js';
-import type { ArchitectAgent, DiscoveryHistoryEntry } from './architect-agent.js';
+import type {
+  ArchitectAgent,
+  ArchitectStep,
+  DiscoveryHistoryEntry,
+  GapAssessment,
+} from './architect-agent.js';
 import {
   type DiscoveryAnswerValue,
   type DiscoveryAnswers,
@@ -8,20 +13,25 @@ import {
   SPRINT_1_QUESTIONS,
 } from './questions.js';
 
+export interface DiscoveryResult {
+  answers: DiscoveryAnswers;
+  gap: GapAssessment;
+  override?: { acceptedAt: string };
+}
+
+export interface RunAdaptiveDiscoveryOptions {
+  agent: ArchitectAgent;
+  /**
+   * Optional confirmation hook for critical gaps. Defaults to an inquirer
+   * `confirm` prompt asking the user whether to proceed anyway. Override in
+   * tests or for non-interactive callers.
+   */
+  confirmCriticalGap?: (gap: GapAssessment) => Promise<boolean>;
+}
+
 export async function runDiscovery(
-  source: readonly Question[] | ArchitectAgent = SPRINT_1_QUESTIONS,
+  questions: readonly Question[] = SPRINT_1_QUESTIONS,
 ): Promise<DiscoveryAnswers> {
-  if (isArchitectAgent(source)) {
-    return runArchitectFlow(source);
-  }
-  return runStaticFlow(source);
-}
-
-function isArchitectAgent(source: readonly Question[] | ArchitectAgent): source is ArchitectAgent {
-  return !Array.isArray(source);
-}
-
-async function runStaticFlow(questions: readonly Question[]): Promise<DiscoveryAnswers> {
   const answers: DiscoveryAnswers = {};
   for (const question of questions) {
     answers[question.id] = await askQuestion(question);
@@ -29,20 +39,54 @@ async function runStaticFlow(questions: readonly Question[]): Promise<DiscoveryA
   return answers;
 }
 
-async function runArchitectFlow(agent: ArchitectAgent): Promise<DiscoveryAnswers> {
+export async function runAdaptiveDiscovery(
+  options: RunAdaptiveDiscoveryOptions,
+): Promise<DiscoveryResult> {
+  const { agent } = options;
+  const confirmCriticalGap = options.confirmCriticalGap ?? defaultConfirmCriticalGap;
+
   const history: DiscoveryHistoryEntry[] = [];
-  let next: Question | null = agent.seedQuestion();
-  while (next) {
-    const answer = await askQuestion(next);
-    history.push({ question: next, answer });
-    // Pass a snapshot so the agent cannot mutate the canonical history.
-    next = await agent.nextQuestion([...history]);
+  let step: ArchitectStep = {
+    type: 'question',
+    question: agent.seedQuestion(),
+  };
+  while (step.type === 'question') {
+    const answer = await askQuestion(step.question);
+    history.push({ question: step.question, answer });
+    step = await agent.nextStep([...history]);
   }
+
   const answers: DiscoveryAnswers = {};
   for (const entry of history) {
     answers[entry.question.id] = entry.answer;
   }
-  return answers;
+
+  const { gap } = step;
+  if (gap.status === 'critical_missing') {
+    const accepted = await confirmCriticalGap(gap);
+    if (!accepted) {
+      throw new SpexError(`Discovery cancelled: critical info missing (${gap.missing.join('; ')})`);
+    }
+    return {
+      answers,
+      gap,
+      override: { acceptedAt: new Date().toISOString() },
+    };
+  }
+  return { answers, gap };
+}
+
+async function defaultConfirmCriticalGap(gap: GapAssessment): Promise<boolean> {
+  const missingList = gap.missing.map((m) => `  - ${m}`).join('\n');
+  const message = [
+    'Critical info is still missing:',
+    missingList,
+    '',
+    `Rationale: ${gap.rationale}`,
+    '',
+    'Continue anyway?',
+  ].join('\n');
+  return confirm({ message, default: false });
 }
 
 async function askQuestion(question: Question): Promise<DiscoveryAnswerValue> {
