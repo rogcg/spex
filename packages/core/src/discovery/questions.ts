@@ -1,7 +1,11 @@
+export type DiscoveryAnswerValue = string | string[] | boolean;
+
+export type DiscoveryAnswers = Record<string, DiscoveryAnswerValue>;
+
 export interface Question {
   id: string;
   prompt: string;
-  type: 'input' | 'select';
+  type: 'input' | 'select' | 'multi-select' | 'confirm';
   choices?: readonly string[];
 }
 
@@ -52,5 +56,3 @@ export const SPRINT_1_QUESTIONS: readonly Question[] = [
     ],
   },
 ] as const;
-
-export type DiscoveryAnswers = Record<string, string>;

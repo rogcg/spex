@@ -1,22 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SpexError } from '../errors.js';
+import type { ArchitectAgent } from './architect-agent.js';
+import type { Question } from './questions.js';
 
-const { mockInput, mockSelect } = vi.hoisted(() => ({
+const { mockInput, mockSelect, mockCheckbox, mockConfirm } = vi.hoisted(() => ({
   mockInput: vi.fn(),
   mockSelect: vi.fn(),
+  mockCheckbox: vi.fn(),
+  mockConfirm: vi.fn(),
 }));
 
 vi.mock('@inquirer/prompts', () => ({
   input: mockInput,
   select: mockSelect,
+  checkbox: mockCheckbox,
+  confirm: mockConfirm,
 }));
 
 const { runDiscovery } = await import('./flow.js');
 
-describe('runDiscovery', () => {
+describe('runDiscovery (static questions)', () => {
   beforeEach(() => {
     mockInput.mockReset();
     mockSelect.mockReset();
+    mockCheckbox.mockReset();
+    mockConfirm.mockReset();
   });
 
   it('asks every discovery question in order and returns answers keyed by id', async () => {
@@ -79,6 +87,27 @@ describe('runDiscovery', () => {
     expect(mockSelect).not.toHaveBeenCalled();
   });
 
+  it('handles multi-select questions and returns the selected array', async () => {
+    mockCheckbox.mockResolvedValueOnce(['A', 'B']);
+    const answers = await runDiscovery([
+      { id: 'features', prompt: 'Pick features', type: 'multi-select', choices: ['A', 'B', 'C'] },
+    ]);
+    expect(answers).toEqual({ features: ['A', 'B'] });
+    expect(mockCheckbox).toHaveBeenCalledWith({
+      message: 'Pick features',
+      choices: [{ value: 'A' }, { value: 'B' }, { value: 'C' }],
+    });
+  });
+
+  it('handles confirm questions and returns the boolean answer', async () => {
+    mockConfirm.mockResolvedValueOnce(true);
+    const answers = await runDiscovery([
+      { id: 'wants_db', prompt: 'Need a database?', type: 'confirm' },
+    ]);
+    expect(answers).toEqual({ wants_db: true });
+    expect(mockConfirm).toHaveBeenCalledWith({ message: 'Need a database?' });
+  });
+
   it('throws SpexError when a select question is defined without choices', async () => {
     await expect(runDiscovery([{ id: 'bad', prompt: 'X', type: 'select' }])).rejects.toThrow(
       SpexError,
@@ -89,5 +118,102 @@ describe('runDiscovery', () => {
     await expect(
       runDiscovery([{ id: 'bad', prompt: 'X', type: 'select', choices: [] }]),
     ).rejects.toThrow(SpexError);
+  });
+
+  it('throws SpexError when a multi-select question is missing choices', async () => {
+    await expect(runDiscovery([{ id: 'bad', prompt: 'X', type: 'multi-select' }])).rejects.toThrow(
+      SpexError,
+    );
+  });
+});
+
+describe('runDiscovery (architect agent)', () => {
+  beforeEach(() => {
+    mockInput.mockReset();
+    mockSelect.mockReset();
+    mockCheckbox.mockReset();
+    mockConfirm.mockReset();
+  });
+
+  it('drives multiple questions from an ArchitectAgent and stops when nextQuestion returns null', async () => {
+    mockInput.mockResolvedValueOnce('task tracker');
+    mockSelect.mockResolvedValueOnce('Consumers (B2C)');
+
+    const seed: Question = { id: 'project_type', prompt: 'What?', type: 'input' };
+    const followUp: Question = {
+      id: 'primary_users',
+      prompt: 'Who?',
+      type: 'select',
+      choices: ['Consumers (B2C)', 'Businesses'],
+    };
+
+    const nextQuestion = vi
+      .fn<ArchitectAgent['nextQuestion']>()
+      .mockResolvedValueOnce(followUp)
+      .mockResolvedValueOnce(null);
+
+    const agent: ArchitectAgent = {
+      seedQuestion: () => seed,
+      nextQuestion,
+    };
+
+    const answers = await runDiscovery(agent);
+
+    expect(answers).toEqual({
+      project_type: 'task tracker',
+      primary_users: 'Consumers (B2C)',
+    });
+    expect(nextQuestion).toHaveBeenCalledTimes(2);
+    const firstHistory = nextQuestion.mock.calls[0]?.[0];
+    expect(firstHistory).toEqual([{ question: seed, answer: 'task tracker' }]);
+    const secondHistory = nextQuestion.mock.calls[1]?.[0];
+    expect(secondHistory).toEqual([
+      { question: seed, answer: 'task tracker' },
+      { question: followUp, answer: 'Consumers (B2C)' },
+    ]);
+  });
+
+  it('returns only the seed answer when the agent immediately signals done', async () => {
+    mockInput.mockResolvedValueOnce('just the seed');
+    const agent: ArchitectAgent = {
+      seedQuestion: () => ({ id: 'seed', prompt: '?', type: 'input' }),
+      nextQuestion: vi.fn().mockResolvedValue(null),
+    };
+
+    const answers = await runDiscovery(agent);
+
+    expect(answers).toEqual({ seed: 'just the seed' });
+  });
+
+  it('preserves multi-select array and confirm boolean answers in the final result', async () => {
+    mockInput.mockResolvedValueOnce('app');
+    mockCheckbox.mockResolvedValueOnce(['Auth', 'Realtime']);
+    mockConfirm.mockResolvedValueOnce(false);
+
+    const agent: ArchitectAgent = {
+      seedQuestion: () => ({ id: 'project_type', prompt: '?', type: 'input' }),
+      nextQuestion: vi
+        .fn<ArchitectAgent['nextQuestion']>()
+        .mockResolvedValueOnce({
+          id: 'features',
+          prompt: 'Pick features',
+          type: 'multi-select',
+          choices: ['Auth', 'Realtime', 'Uploads'],
+        })
+        .mockResolvedValueOnce({
+          id: 'needs_db',
+          prompt: 'DB?',
+          type: 'confirm',
+        })
+        .mockResolvedValueOnce(null),
+    };
+
+    const answers = await runDiscovery(agent);
+
+    expect(answers).toEqual({
+      project_type: 'app',
+      features: ['Auth', 'Realtime'],
+      needs_db: false,
+    });
   });
 });
