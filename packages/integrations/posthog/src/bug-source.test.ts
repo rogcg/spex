@@ -183,8 +183,7 @@ describe('buildPostHogBugSource', () => {
               properties: {
                 $session_id: 'sess_zzz1',
                 $exception_issue_id: 'iss_abc123',
-                $session_recording_url:
-                  'https://other.posthog.io/replay/sess_zzz1?token=xyz',
+                $session_recording_url: 'https://other.posthog.io/replay/sess_zzz1?token=xyz',
               },
             },
           ],

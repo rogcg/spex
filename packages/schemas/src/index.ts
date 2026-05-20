@@ -81,6 +81,11 @@ export {
   PostHogIntegrationConfigSchema,
   PostHogIssueSeveritySchema,
   ReviewModeSchema,
+  SlackApprovalModeSchema,
+  SlackApprovalsConfigSchema,
+  SlackChannelsConfigSchema,
+  SlackIntegrationConfigSchema,
+  SlackSlashCommandsConfigSchema,
   type AiConfig,
   type GitHubIntegrationConfig,
   type IntegrationsConfig,
@@ -90,6 +95,11 @@ export {
   type PostHogIntegrationConfig,
   type PostHogIssueSeverity,
   type ReviewMode,
+  type SlackApprovalMode,
+  type SlackApprovalsConfig,
+  type SlackChannelsConfig,
+  type SlackIntegrationConfig,
+  type SlackSlashCommandsConfig,
 } from './ai-config.js';
 export {
   ReviewFindingSchema,

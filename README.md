@@ -130,6 +130,177 @@ Writes two workflows to `.github/workflows/`:
 
 Both workflows install SPEX from this repo via `actions/checkout` + `pnpm install` + `pnpm -r build` until SPEX is published to npm. The `SPEX_REPO` and `SPEX_REF` env vars at the top of each template let you pin a tag or a fork. The workflows require repo secrets `ANTHROPIC_API_KEY` (the default `GITHUB_TOKEN` provided by Actions is sufficient for the rest).
 
+## Optional integrations
+
+Each integration is opt-in via `.ai/config.yaml` plus an env var or two. Nothing
+below changes how `spex new` / `implement` / `fix` / `review` behave at their
+core — they layer on top.
+
+The `.ai/config.yaml` schema for every block is in
+[`packages/schemas/src/ai-config.ts`](./packages/schemas/src/ai-config.ts) and
+is strict-mode (unknown keys throw at load time).
+
+### Linear — drive `implement` from issues + auto-sync PR/issue status
+
+Read a feature description from a Linear issue, then keep the issue's status
+in sync with PR lifecycle events (opened → In Review, merged → Done, closed
+unmerged → optional comment).
+
+```bash
+export LINEAR_API_KEY=lin_api_...   # personal API key, https://linear.app/settings/api
+```
+
+`.ai/config.yaml`:
+
+```yaml
+integrations:
+  linear:
+    team: <TEAM-KEY>            # e.g. the prefix used for issue ids
+    status_mapping:             # optional; shown here with defaults
+      in_progress: "In Progress"
+      in_review: "In Review"
+      done: "Done"
+      todo: "Todo"
+    comment_on_unmerged_close: true
+```
+
+Then:
+
+```bash
+# pull title + description from a Linear issue, run the implement flow on it
+spex implement --from-issue <ISSUE-ID>
+
+# read a GitHub PR webhook payload (or pass --pr-url manually) and update the
+# linked Linear issue's status. Designed to be called from a GitHub Action.
+spex linear-sync --event-path .github/event.json --pr-url <PR-URL>
+```
+
+The PR ↔ issue link comes from either a `feature/<linear-id>-...` branch name
+convention or a `Closes <ISSUE-ID>` line in the PR body — whichever exists.
+
+### PostHog — pull bug context + auto-trigger `fix` on errors
+
+Use PostHog's MCP server as the source of bug context: stack frames, occurrence
+counts, affected user counts, session recording deep-links. Optionally
+auto-trigger `spex fix` from a PostHog error-tracking webhook.
+
+```bash
+export POSTHOG_API_KEY=phx_...           # personal API key with the "MCP Server" preset
+export POSTHOG_PROJECT_ID=<numeric-id>   # optional; defaults to the key's default project
+export POSTHOG_WEBHOOK_SECRET=...        # only needed if you wire the auto-trigger webhook
+```
+
+`.ai/config.yaml`:
+
+```yaml
+integrations:
+  posthog:
+    auto_fix:
+      enabled: false              # set true to wire the webhook auto-trigger
+      severity: ["critical"]      # severity allow-list; events with no severity tag
+                                  # also pass when this list contains "critical"
+      min_occurrences: 5          # skip until the issue has fired this many times
+```
+
+Then:
+
+```bash
+# manually: pull bug context from PostHog and run the full fix pipeline
+spex fix --from-error=posthog:<ISSUE-ID>
+
+# unattended (e.g. from a GitHub Action / serverless function): receive one
+# PostHog error-tracking webhook delivery, verify its signature, apply the
+# filter above, and on a trigger decision run `spex fix --from-error=… --auto`.
+spex posthog-webhook \
+  --payload-path body.json \
+  --signature "$X_POSTHOG_SIGNATURE" \
+  --secret "$POSTHOG_WEBHOOK_SECRET"
+```
+
+`regression` events are always skipped — re-firing of a resolved issue is too
+risky for an unattended AI fix.
+
+### Slack — notifications, async approvals, slash commands
+
+Three flows: outbound notifications (PR opened, fix proposed, spec generated,
+review complete), async approval gates with Block Kit buttons, and slash
+commands (`/spex review <pr-url>`, `/spex implement <description>`,
+`/spex status`).
+
+```bash
+export SLACK_BOT_TOKEN=xoxb-...           # bot user OAuth token; needs chat:write
+                                          # (and commands if you add slash commands)
+export SLACK_SIGNING_SECRET=...           # for HMAC verification of incoming webhooks
+export SLACK_TOKEN_STORAGE_KEY=$(openssl rand -hex 32)   # AES-256-GCM key for the
+                                                          # encrypted on-disk token store
+```
+
+`.ai/config.yaml`:
+
+```yaml
+integrations:
+  slack:
+    channels:                       # per-event routing; falls back to `default`,
+                                    # silently skipped if neither is set
+      pr_opened: "#<channel>"
+      fix_proposed: "#<channel>"
+      spec_generated: "#<channel>"
+      review_complete: "#<channel>"
+      default: "#<channel>"
+    approvals:                      # async approval gate (defaults shown)
+      enabled: false
+      approvers: []                 # Slack user ids allowed to approve / reject
+      mode: any_of                  # any_of | all_of | quorum
+      # quorum: 2                   # required when mode = "quorum"
+      timeout_hours: 24
+    slash_commands:
+      enabled: true
+      allowed_users: []             # empty = anyone; otherwise allow-list for
+                                    # state-changing commands (review, implement)
+      allowed_channels: []          # empty = any channel
+```
+
+#### Slack app — minimum scopes
+
+Create a Slack app at https://api.slack.com/apps. Under "OAuth & Permissions",
+add these Bot Token Scopes:
+
+- `chat:write` (post messages)
+- `chat:write.public` (post without being invited to the channel)
+- `commands` (slash commands)
+- `channels:read`, `users:read`, `im:write` (optional, for the slash-command UX)
+
+Install (or reinstall) the app to your workspace and copy the **Bot User OAuth
+Token** (`xoxb-...`) — that is what `SLACK_BOT_TOKEN` points to. The signing
+secret is on the "Basic Information" page under "App Credentials".
+
+#### Handling a Slack delivery
+
+`spex slack-webhook` is a one-shot CLI that parses a single Slack delivery
+body (slash command or `block_actions` button click), verifies the HMAC, and
+dispatches:
+
+```bash
+spex slack-webhook \
+  --payload-path body.txt \
+  --signature "$X_SLACK_SIGNATURE" \
+  --timestamp "$X_SLACK_REQUEST_TIMESTAMP" \
+  --secret "$SLACK_SIGNING_SECRET"
+```
+
+Run it behind a tiny HTTP shim (Lambda, Cloud Run, ngrok + a one-route
+Express handler) that writes the request body to a temp file and shells out
+to the CLI. Long-running Bolt-SDK server mode is a future release; the
+one-shot path matches the serverless / GitHub Actions delivery pattern.
+
+#### Live validation
+
+`scripts/slack-live-probe.mjs` exercises every Slack-side surface
+(encrypted token store, HMAC, the four Block Kit templates posted to a
+channel, approval state machine) using `SLACK_BOT_TOKEN`,
+`SLACK_SIGNING_SECRET`, and `SLACK_TEST_CHANNEL`. Useful after a fresh
+app install to confirm scopes + channel access in under 5 seconds.
+
 ### Run as an MCP server — `spex mcp-server`
 
 Expose SPEX as tools to Claude Code, Cursor, and other MCP-compatible IDEs.
@@ -180,10 +351,15 @@ packages/
   schemas/       — zod schemas: TechSpec, FeatureSpec, ImplementationPlan, … (@spex/schemas)
   core/          — LLM, discovery, tech-spec, scaffold, init, context, feature-spec,
                    implementation (planner/executor), bug-fix, git, logger (@spex/core)
-  cli/           — spex binary with new, init, implement, fix, review, mcp-server commands (@spex/cli)
+  cli/           — spex binary with new, init, implement, fix, review,
+                   linear-sync, posthog-webhook, slack-webhook, mcp-server commands (@spex/cli)
   mcp-server/    — MCP server (stdio) exposing SPEX tools (@spex/mcp-server)
   integrations/
     github/      — GitHub PR/branch/review operations (@spex/integrations-github)
+    linear/      — Linear MCP client + issue/PR sync (@spex/integrations-linear)
+    posthog/     — PostHog MCP client + bug-source + webhook receiver (@spex/integrations-posthog)
+    slack/       — Slack OAuth + token store + notification templates + approval flow
+                   + slash-command parser + webhook receiver (@spex/integrations-slack)
 ```
 
 ## License

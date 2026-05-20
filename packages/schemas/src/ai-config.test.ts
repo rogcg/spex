@@ -186,6 +186,76 @@ describe('PostHogIntegrationConfigSchema', () => {
   });
 });
 
+describe('SlackIntegrationConfigSchema', () => {
+  it('applies defaults when slack is set to an empty object', () => {
+    const parsed = AiConfigSchema.parse({
+      integrations: { slack: {} },
+    });
+    expect(parsed.integrations?.slack?.channels).toEqual({});
+    expect(parsed.integrations?.slack?.approvals.enabled).toBe(false);
+    expect(parsed.integrations?.slack?.approvals.mode).toBe('any_of');
+    expect(parsed.integrations?.slack?.approvals.timeout_hours).toBe(24);
+    expect(parsed.integrations?.slack?.slash_commands.enabled).toBe(true);
+    expect(parsed.integrations?.slack?.slash_commands.allowed_users).toEqual([]);
+  });
+
+  it('honours a fully-specified slack block', () => {
+    const parsed = AiConfigSchema.parse({
+      integrations: {
+        slack: {
+          channels: {
+            pr_opened: 'C_PRS',
+            fix_proposed: 'C_ALERTS',
+            spec_generated: 'C_SPECS',
+            review_complete: 'C_REVIEWS',
+            default: 'C_GENERAL',
+          },
+          approvals: {
+            enabled: true,
+            approvers: ['U_ADMIN_1', 'U_ADMIN_2'],
+            mode: 'quorum',
+            quorum: 2,
+            timeout_hours: 48,
+          },
+          slash_commands: {
+            enabled: true,
+            allowed_users: ['U_ADMIN_1'],
+            allowed_channels: ['C_OPS'],
+          },
+        },
+      },
+    });
+    expect(parsed.integrations?.slack?.channels.pr_opened).toBe('C_PRS');
+    expect(parsed.integrations?.slack?.approvals.approvers).toEqual(['U_ADMIN_1', 'U_ADMIN_2']);
+    expect(parsed.integrations?.slack?.approvals.mode).toBe('quorum');
+    expect(parsed.integrations?.slack?.approvals.quorum).toBe(2);
+  });
+
+  it('rejects an unknown approval mode', () => {
+    expect(() =>
+      AiConfigSchema.parse({
+        integrations: { slack: { approvals: { mode: 'majority' } } },
+      }),
+    ).toThrow();
+  });
+
+  it('rejects unknown keys under slack (strict)', () => {
+    expect(() =>
+      AiConfigSchema.parse({
+        integrations: { slack: { surprise: true } },
+      }),
+    ).toThrow();
+  });
+
+  it('rejects unknown keys under slack.channels (strict)', () => {
+    expect(() =>
+      AiConfigSchema.parse({
+        integrations: { slack: { channels: { bizarre: 'C1' } } },
+      }),
+    ).toThrow();
+  });
+});
+
 describe('AiConfigSchema', () => {
   it('accepts an empty config (no integrations)', () => {
     const parsed = AiConfigSchema.parse({});

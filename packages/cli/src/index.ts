@@ -8,6 +8,7 @@ import { runMcpServerCommand } from './commands/mcp-server.js';
 import { runNewCommand } from './commands/new.js';
 import { runPostHogWebhookCommand } from './commands/posthog-webhook.js';
 import { runReviewCommand } from './commands/review.js';
+import { runSlackWebhookCommand } from './commands/slack-webhook.js';
 import { STRINGS } from './strings.js';
 import { printBanner } from './ui/banner.js';
 
@@ -219,6 +220,37 @@ program
         await runPostHogWebhookCommand({
           ...(opts.payloadPath !== undefined ? { payloadPath: opts.payloadPath } : {}),
           ...(opts.signature !== undefined ? { signature: opts.signature } : {}),
+          ...(opts.secret !== undefined ? { secret: opts.secret } : {}),
+          ...(opts.dryRun ? { dryRun: true } : {}),
+        });
+      } catch (error) {
+        handleError(error);
+      }
+    },
+  );
+
+program
+  .command('slack-webhook')
+  .description(STRINGS.slackWebhookCommand.description)
+  .option('--payload-path <path>', STRINGS.slackWebhookCommand.payloadPathFlagDescription)
+  .option('--signature <header>', STRINGS.slackWebhookCommand.signatureFlagDescription)
+  .option('--timestamp <header>', STRINGS.slackWebhookCommand.timestampFlagDescription)
+  .option('--secret <secret>', STRINGS.slackWebhookCommand.secretFlagDescription)
+  .option('--dry-run', STRINGS.slackWebhookCommand.dryRunFlagDescription)
+  .action(
+    async (opts: {
+      payloadPath?: string;
+      signature?: string;
+      timestamp?: string;
+      secret?: string;
+      dryRun?: boolean;
+    }) => {
+      printBanner();
+      try {
+        await runSlackWebhookCommand({
+          ...(opts.payloadPath !== undefined ? { payloadPath: opts.payloadPath } : {}),
+          ...(opts.signature !== undefined ? { signature: opts.signature } : {}),
+          ...(opts.timestamp !== undefined ? { timestamp: opts.timestamp } : {}),
           ...(opts.secret !== undefined ? { secret: opts.secret } : {}),
           ...(opts.dryRun ? { dryRun: true } : {}),
         });

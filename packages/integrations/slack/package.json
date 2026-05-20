@@ -1,13 +1,13 @@
 {
-  "name": "@spex/integrations-posthog",
+  "name": "@spex/integrations-slack",
   "version": "0.8.0",
   "private": true,
-  "description": "PostHog integration for SPEX — MCP client wrapper for the official PostHog MCP server (error tracking, events, session recordings)",
+  "description": "Slack integration for SPEX — outbound notifications, async approvals via interactive buttons, and slash commands (/spex review, /spex implement, /spex status)",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/rogcg/spex.git",
-    "directory": "packages/integrations/posthog"
+    "directory": "packages/integrations/slack"
   },
   "homepage": "https://github.com/rogcg/spex#readme",
   "bugs": {
@@ -29,7 +29,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@slack/web-api": "^7.8.0",
     "@spex/core": "workspace:*",
     "@spex/schemas": "workspace:*",
     "zod": "^3.23.8"

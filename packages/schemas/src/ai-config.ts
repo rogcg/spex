@@ -79,11 +79,87 @@ export const PostHogIntegrationConfigSchema = z
   })
   .strict();
 
+export const SlackChannelsConfigSchema = z
+  .object({
+    /** Channel id (`C…`) or `#name`. Routes the `pr_opened` template. */
+    pr_opened: z.string().min(1).optional(),
+    /** Routes the `fix_proposed` approval card. */
+    fix_proposed: z.string().min(1).optional(),
+    /** Routes the `spec_generated` notification / approval card. */
+    spec_generated: z.string().min(1).optional(),
+    /** Routes the `review_complete` notification. */
+    review_complete: z.string().min(1).optional(),
+    /** Fallback channel when an event-specific entry is missing. */
+    default: z.string().min(1).optional(),
+  })
+  .strict()
+  .default({});
+
+export const SlackApprovalModeSchema = z.enum(['any_of', 'all_of', 'quorum']);
+
+export const SlackApprovalsConfigSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    /** Slack user ids (`U…`) allowed to approve / reject. */
+    approvers: z.array(z.string().min(1)).default([]),
+    /** Strategy for combining decisions. Default `any_of`. */
+    mode: SlackApprovalModeSchema.default('any_of'),
+    /** Quorum count when `mode === 'quorum'`. Required in that mode. */
+    quorum: z.number().int().min(1).optional(),
+    /** Approval expiry in hours. Default 24. */
+    timeout_hours: z.number().int().min(1).default(24),
+  })
+  .strict()
+  .default({
+    enabled: false,
+    approvers: [],
+    mode: 'any_of',
+    timeout_hours: 24,
+  });
+
+export const SlackSlashCommandsConfigSchema = z
+  .object({
+    enabled: z.boolean().default(true),
+    /** Slack user ids allowed to run state-changing commands (review, implement). */
+    allowed_users: z.array(z.string().min(1)).default([]),
+    /** Slack channel ids commands may be invoked from. Empty = any channel. */
+    allowed_channels: z.array(z.string().min(1)).default([]),
+  })
+  .strict()
+  .default({
+    enabled: true,
+    allowed_users: [],
+    allowed_channels: [],
+  });
+
+export const SlackIntegrationConfigSchema = z
+  .object({
+    /**
+     * Per-event channel routing. Each key maps to a Slack channel id (`C…`)
+     * or `#channel-name`. Missing entries fall back to `default`; missing
+     * default → notification is skipped (NOT a fatal error).
+     */
+    channels: SlackChannelsConfigSchema,
+    /**
+     * Async approval gate config. Used by the `fix_proposed` /
+     * `spec_generated` flows when SPEX wants human approval before
+     * proceeding.
+     */
+    approvals: SlackApprovalsConfigSchema,
+    /**
+     * Slash-command permission gate (`/spex review`, `/spex implement`,
+     * `/spex status`). `enabled=false` rejects every slash command.
+     */
+    slash_commands: SlackSlashCommandsConfigSchema,
+  })
+  .strict();
+
 export const IntegrationsConfigSchema = z
   .object({
     github: GitHubIntegrationConfigSchema.optional(),
     linear: LinearIntegrationConfigSchema.optional(),
     posthog: PostHogIntegrationConfigSchema.optional(),
+    slack: SlackIntegrationConfigSchema.optional(),
   })
   .strict();
 
@@ -99,5 +175,10 @@ export type LinearIntegrationConfig = z.infer<typeof LinearIntegrationConfigSche
 export type PostHogIntegrationConfig = z.infer<typeof PostHogIntegrationConfigSchema>;
 export type PostHogAutoFixConfig = z.infer<typeof PostHogAutoFixConfigSchema>;
 export type PostHogIssueSeverity = z.infer<typeof PostHogIssueSeveritySchema>;
+export type SlackIntegrationConfig = z.infer<typeof SlackIntegrationConfigSchema>;
+export type SlackChannelsConfig = z.infer<typeof SlackChannelsConfigSchema>;
+export type SlackApprovalsConfig = z.infer<typeof SlackApprovalsConfigSchema>;
+export type SlackSlashCommandsConfig = z.infer<typeof SlackSlashCommandsConfigSchema>;
+export type SlackApprovalMode = z.infer<typeof SlackApprovalModeSchema>;
 export type IntegrationsConfig = z.infer<typeof IntegrationsConfigSchema>;
 export type AiConfig = z.infer<typeof AiConfigSchema>;

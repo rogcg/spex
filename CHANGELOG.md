@@ -9,6 +9,86 @@ While SPEX is on `0.x`, any minor release may contain breaking changes to CLI
 flags, `.ai/` artifact formats, MCP tool shapes, or schema definitions. Pin to
 a specific version (or commit SHA, until npm publish) if you need stability.
 
+## [0.8.0] — 2026-05-19
+
+### Added — Slack integration
+
+- New workspace package `@spex/integrations-slack`. Depends on
+  `@slack/web-api` for outbound calls; the receiver path is a pure-TS
+  signature-verifier + payload parser (no Bolt SDK runtime), modelled on
+  the PostHog one-shot webhook pattern so a Lambda / GitHub Action /
+  Cloud Run shim can deliver one event at a time. Long-running Bolt
+  server mode is deferred to a follow-up release.
+- `createSlackClient` — env-driven (`SLACK_BOT_TOKEN`) authenticated
+  WebClient factory with workspace-token override + retry config.
+- OAuth v2 install flow: `buildSlackInstallUrl` + `exchangeSlackOAuthCode`
+  + `completeSlackInstall`, with redaction-safe `SlackOAuthError`. State
+  validation is the caller's responsibility (Slack does not validate it).
+- Encrypted token store (`saveWorkspaceTokens` / `loadWorkspaceTokens` /
+  `deleteWorkspaceTokens` / `listStoredWorkspaceIds`). AES-256-GCM with a
+  SHA-256 stretched key from `SLACK_TOKEN_STORAGE_KEY`; on-disk records
+  contain only ciphertext + iv + auth-tag, never the bot token in
+  plaintext.
+- Notification templates (Block Kit JSON): `pr_opened`, `fix_proposed`
+  (with Approve / Reject / Inspect buttons threaded to a correlation
+  id), `spec_generated` (optionally approval-gated), `review_complete`.
+  High-level dispatchers (`notifyPrOpened` etc.) route via
+  `integrations.slack.channels` in `.ai/config.yaml`, falling back to
+  `channels.default`, skipping silently when neither is set.
+- Async approval state machine (`.ai/scratch/approvals/<correlation-id>.json`):
+  pending → approved / rejected / expired, with `any_of` / `all_of` /
+  `quorum` decision modes, configurable timeout (default 24h),
+  audit-trail decision log, lazy expiry on first decision attempt, and
+  background `expirePendingApprovals` sweep. Files are written with mode
+  `0o600` on POSIX.
+- Slash-command parser (`/spex review <pr-url>`, `/spex implement <text>`,
+  `/spex status`, `/spex help`) with a permission gate
+  (`integrations.slack.slash_commands.{enabled, allowed_users,
+  allowed_channels}`) that lets read-only sub-commands through but
+  scopes state-changing ones to an allow-list.
+- HMAC v0 signature verification (`verifySlackSignature`) matching
+  Slack's published spec — `v0:<ts>:<body>` HMAC-SHA256, 5-minute
+  replay-attack window, `timingSafeEqual` comparison.
+- `spex slack-webhook` CLI command + MCP-style tool: parses one Slack
+  delivery (slash command or `block_actions` interactive payload),
+  verifies the signature, applies the permission gate, dispatches
+  slash commands to `runImplementCommand` / `runReviewCommand`, and
+  records button-click decisions against the approval store.
+- New `.ai/config.yaml` block: `integrations.slack.{channels, approvals,
+  slash_commands}` — see `packages/schemas/src/ai-config.ts` for the
+  full schema, defaults, and strict-mode validation.
+
+### Verified
+
+- 80 Slack-package unit tests + 5 new `slack-webhook` E2E tests
+  (signed slash command dispatch, permission rejection, signature
+  mismatch, missing approval record, missing integration config) +
+  6 new schema tests for the Slack config block, all passing on
+  Windows. Live Slack round-trip is gated behind a user-configured
+  Slack app and tracked via `scripts/slack-live-probe.mjs`
+  (out-of-band; see SPX-60).
+
+### Deferred to a follow-up
+
+- Long-running Bolt SDK server mode. The current one-shot CLI receiver
+  matches the PostHog architectural pattern and works for serverless
+  delivery; persistent socket-mode / Bolt server is on the SPX-56
+  follow-up checklist.
+- Modal forms for richer slash-command inputs (mentioned in SPX-59).
+  The current shape passes free-form text through; modals are an
+  enhancement that does not change the receiver's contract.
+- Wiring the notification dispatchers directly into `spex implement` /
+  `spex fix` / `spex review`. The templates and dispatchers are
+  callable today; the auto-post hookpoints in those flows will land
+  in a follow-up sprint together with the spec/fix-proposed approval
+  gate integration.
+
+### Known issues
+
+- Unchanged from 0.5.0 / 0.7.0: `src/logger/logger.test.ts` and
+  `src/implementation/safety.test.ts` flake on Windows due to pino file
+  handle race + drive-letter resolution differences. Pass on Linux CI.
+
 ## [0.7.0] — 2026-05-19
 
 ### Added — PostHog integration
@@ -248,6 +328,7 @@ a specific version (or commit SHA, until npm publish) if you need stability.
 - CI workflow (`.github/workflows/ci.yml`) running install, lint,
   typecheck, test on push + PR.
 
+[0.8.0]: https://github.com/rogcg/spex/releases/tag/v0.8.0
 [0.7.0]: https://github.com/rogcg/spex/releases/tag/v0.7.0
 [0.5.2]: https://github.com/rogcg/spex/releases/tag/v0.5.2
 [0.5.1]: https://github.com/rogcg/spex/releases/tag/v0.5.1

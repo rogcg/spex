@@ -187,10 +187,8 @@ const errorIssueSchema = z
   })
   .passthrough()
   .transform((raw): PostHogErrorIssue => {
-    const occurrences =
-      raw.aggregations?.occurrences ?? raw.occurrences ?? null;
-    const affectedUsers =
-      raw.aggregations?.users ?? raw.affectedUsers ?? raw.users ?? null;
+    const occurrences = raw.aggregations?.occurrences ?? raw.occurrences ?? null;
+    const affectedUsers = raw.aggregations?.users ?? raw.affectedUsers ?? raw.users ?? null;
     const firstSeen = raw.first_seen ?? raw.firstSeen ?? '';
     const lastSeen = raw.last_seen ?? raw.lastSeen ?? '';
     const url = raw.url ?? raw._posthogUrl ?? '';
@@ -308,7 +306,9 @@ const sqlResultSchema = z
   .union([
     // Newer shape: `{events: [...]}` — produced when execute-sql is queried
     // through certain wrappers; treat the same as issue-events.
-    z.object({ events: z.array(eventSchema) }).passthrough(),
+    z
+      .object({ events: z.array(eventSchema) })
+      .passthrough(),
     sqlTabularSchema,
     z.array(eventSchema).transform((events) => ({ columns: [], results: [], events })),
   ])
@@ -448,7 +448,9 @@ function extractJsonFromContent(result: NormalizedToolResult): unknown {
  * collides with literal pipes in values, but those are rare in the columns
  * SPEX cares about (uuid / event / timestamp / distinct_id / properties).
  */
-function parsePostHogSqlTextTable(text: string): { columns: string[]; results: unknown[][] } | null {
+function parsePostHogSqlTextTable(
+  text: string,
+): { columns: string[]; results: unknown[][] } | null {
   const fenceMatch = text.match(/```\s*\n([\s\S]+?)\n```/);
   const body = fenceMatch?.[1] ?? text;
   const lines = body

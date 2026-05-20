@@ -281,6 +281,48 @@ export const STRINGS = {
       `\nTriggering auto-fix for posthog:${issueId} (PR will be opened with the auto-fix label).`,
   },
 
+  slackWebhookCommand: {
+    description:
+      'Handle a Slack webhook delivery (slash command or block_actions interactive payload): verify signature, parse, route to the matching SPEX flow',
+    payloadPathFlagDescription: 'path to a file containing the raw Slack request body',
+    signatureFlagDescription:
+      'Slack signature header value (X-Slack-Signature, e.g. `v0=…`) — used to verify the payload',
+    timestampFlagDescription:
+      'Slack request timestamp header value (X-Slack-Request-Timestamp, unix seconds)',
+    secretFlagDescription: 'override SLACK_SIGNING_SECRET env var for signature verification',
+    dryRunFlagDescription: 'parse + verify the payload, but do not invoke any downstream SPEX flow',
+
+    integrationNotConfigured:
+      'Error: Slack integration not configured. Add `integrations.slack` to .ai/config.yaml.',
+    invalidConfig: (issues: readonly string[]) =>
+      `Error: invalid .ai/config.yaml:\n${issues.map((i) => `  - ${i}`).join('\n')}`,
+    missingPayloadPath: 'Error: provide --payload-path pointing to the raw Slack request body.',
+    payloadReadFailed: (path: string, reason: string) =>
+      `Error: failed to read payload at ${path}: ${reason}`,
+    invalidPayload: (reason: string) => `Error: failed to parse Slack payload: ${reason}`,
+    missingSigningSecret:
+      'Error: SLACK_SIGNING_SECRET is not set and no --secret was supplied. Configure your Slack app signing secret before processing live deliveries.',
+    signatureMismatch:
+      'Error: Slack request signature did not verify. Rejecting payload (signature mismatch or timestamp outside the 5-minute window).',
+    signatureVerified: '  ✓ Slack signature verified.',
+    unknownEventReason: (reason: string) => `\nIgnoring Slack delivery: ${reason}`,
+    dispatchSlashCommand: (kind: string, by: string) =>
+      `\nDispatching slash command (${kind}) invoked by ${by}.`,
+    permissionDenied: (reason: string) =>
+      `\nRejecting slash command — permission check failed: ${reason}`,
+    approvalRecorded: (opts: { correlationId: string; userId: string; status: string }) =>
+      `\nApproval ${opts.correlationId} updated by ${opts.userId} — status now: ${opts.status}.`,
+    approvalNotApprover: (userId: string) =>
+      `\nUser ${userId} is not on the approver list — decision ignored.`,
+    approvalDuplicate: (userId: string) =>
+      `\nUser ${userId} already voted on this approval — decision ignored.`,
+    approvalExpired: '\nApproval has expired and was finalised before the decision arrived.',
+    approvalAlreadyFinalised: '\nApproval is already finalised — decision ignored.',
+    approvalMissing: (correlationId: string) =>
+      `\nNo approval record found for correlation id ${correlationId} — webhook ignored.`,
+    dryRunPreview: (summary: string) => `\n[dry-run] Would dispatch: ${summary}`,
+  },
+
   mcpServerCommand: {
     description: 'Start SPEX as an MCP server (consumable by Claude Code, Cursor, etc.)',
     transportFlagDescription: 'Transport to use (stdio is the only supported option)',

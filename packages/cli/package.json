@@ -1,6 +1,6 @@
 {
   "name": "@spex/cli",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "description": "spex CLI — Spec-driven Programming EXecutor",
   "license": "MIT",
@@ -29,6 +29,7 @@
     "@spex/integrations-github": "workspace:^",
     "@spex/integrations-linear": "workspace:^",
     "@spex/integrations-posthog": "workspace:^",
+    "@spex/integrations-slack": "workspace:^",
     "@spex/mcp-server": "workspace:^",
     "@spex/schemas": "workspace:*",
     "commander": "^12.1.0"

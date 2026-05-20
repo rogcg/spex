@@ -359,9 +359,11 @@ describe('queryEvents', () => {
 
 describe('getSessionRecording', () => {
   it('calls session-recording-get with the id and required context', async () => {
-    const callTool = vi
-      .fn()
-      .mockResolvedValue({ content: [], structuredContent: sampleSessionRecording, isError: false });
+    const callTool = vi.fn().mockResolvedValue({
+      content: [],
+      structuredContent: sampleSessionRecording,
+      isError: false,
+    });
     const client = makeClient(callTool);
 
     const recording = await getSessionRecording({ client, id: 'rec_xyz789' });
