@@ -12,6 +12,11 @@ import type { LLMProvider, ScaffoldNextJsAppOptions } from '@spex/core';
 export interface ToolDependencies {
   llm?: LLMProvider;
   scaffold?: (options: ScaffoldNextJsAppOptions) => Promise<void>;
+  /**
+   * Override the root directory for skill discovery. Forwarded to
+   * `@spex/skills`'s `loadSkills`. Defaults to the bundled @spex/skills root.
+   */
+  skillsRoot?: string;
 }
 
 export interface ToolDefinition {

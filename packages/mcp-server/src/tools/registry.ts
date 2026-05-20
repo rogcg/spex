@@ -1,5 +1,7 @@
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { getSkillToolDefinition } from './get-skill.js';
+import { listSkillsToolDefinition } from './list-skills.js';
 import { spexFixToolDefinition } from './spex-fix.js';
 import { spexImplementToolDefinition } from './spex-implement.js';
 import { spexNewToolDefinition } from './spex-new.js';
@@ -11,6 +13,8 @@ export const ALL_TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   spexImplementToolDefinition,
   spexFixToolDefinition,
   spexReviewToolDefinition,
+  listSkillsToolDefinition,
+  getSkillToolDefinition,
 ];
 
 /**

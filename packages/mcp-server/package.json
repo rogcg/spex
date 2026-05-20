@@ -36,6 +36,7 @@
     "@spex/core": "workspace:*",
     "@spex/integrations-github": "workspace:^",
     "@spex/schemas": "workspace:*",
+    "@spex/skills": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {

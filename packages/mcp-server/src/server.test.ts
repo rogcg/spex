@@ -38,7 +38,7 @@ describe('startMcpServer (via InMemoryTransport)', () => {
     await server.close();
   });
 
-  it('advertises spex_new, spex_implement, spex_fix, and spex_review via tools/list', async () => {
+  it('advertises spex_*, list_skills, and get_skill via tools/list', async () => {
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     const server = await startMcpServer({ transport: serverTransport });
     const client = new Client({ name: 'spex-test-client', version: '0.0.0' }, { capabilities: {} });
@@ -47,7 +47,14 @@ describe('startMcpServer (via InMemoryTransport)', () => {
     const result = await client.listTools();
     expect(Array.isArray(result.tools)).toBe(true);
     const names = result.tools.map((t) => t.name).sort();
-    expect(names).toEqual(['spex_fix', 'spex_implement', 'spex_new', 'spex_review']);
+    expect(names).toEqual([
+      'get_skill',
+      'list_skills',
+      'spex_fix',
+      'spex_implement',
+      'spex_new',
+      'spex_review',
+    ]);
 
     await client.close();
     await server.close();
