@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 200" width="520" role="img" aria-label="SPEX — Spec-driven Programming EXecutor">
+  <title>SPEX — Spec-driven Programming EXecutor</title>
+  <defs>
+    <linearGradient id="spex-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="50%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+  </defs>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace" font-weight="700" fill="url(#spex-grad)" font-size="20">
+    <text x="20" y="34" xml:space="preserve">███████╗██████╗ ███████╗██╗  ██╗</text>
+    <text x="20" y="58" xml:space="preserve">██╔════╝██╔══██╗██╔════╝╚██╗██╔╝</text>
+    <text x="20" y="82" xml:space="preserve">███████╗██████╔╝█████╗   ╚███╔╝ </text>
+    <text x="20" y="106" xml:space="preserve">╚════██║██╔═══╝ ██╔══╝   ██╔██╗ </text>
+    <text x="20" y="130" xml:space="preserve">███████║██║     ███████╗██╔╝ ██╗</text>
+    <text x="20" y="154" xml:space="preserve">╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝</text>
+  </g>
+  <text x="20" y="184" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" fill="#94a3b8" letter-spacing="0.5">
+    <tspan font-weight="700" fill="#e2e8f0">S</tspan><tspan>pec-driven  </tspan><tspan font-weight="700" fill="#e2e8f0">P</tspan><tspan>rogramming  </tspan><tspan font-weight="700" fill="#e2e8f0">EX</tspan><tspan>ecutor</tspan>
+  </text>
+</svg>

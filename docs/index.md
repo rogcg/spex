@@ -6,6 +6,10 @@ description: "SPEX — Spec-driven Programming EXecutor. AI agent orchestration 
 permalink: /
 ---
 
+<p align="center">
+  <img src="{{ site.baseurl }}/assets/spex-logo.svg" alt="SPEX — Spec-driven Programming EXecutor" width="520">
+</p>
+
 # SPEX
 {: .fs-9 }
 
