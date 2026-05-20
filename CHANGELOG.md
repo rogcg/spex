@@ -9,6 +9,97 @@ While SPEX is on `0.x`, any minor release may contain breaking changes to CLI
 flags, `.ai/` artifact formats, MCP tool shapes, or schema definitions. Pin to
 a specific version (or commit SHA, until npm publish) if you need stability.
 
+## [0.9.0] — 2026-05-20
+
+### Added — Adaptive discovery
+
+- **Architect agent** (`@spex/core` `createArchitectAgent`). Replaces
+  Sprint 1's hardcoded 5-question script with an LLM-driven adaptive
+  interviewer. Each `nextStep` call asks the model for either the next
+  question (informed by all prior answers) or a done signal with a gap
+  assessment. Structured output is validated via a zod discriminated
+  union; the existing `LLMProvider` abstraction is unchanged. The system
+  prompt instructs the model to reuse the five standard Sprint 1 keys
+  (`project_type`, `primary_users`, `expected_scale`,
+  `auth_requirements`, `data_persistence`) so the existing TechSpec
+  generator keeps working.
+- **Extended question types.** `Question.type` now covers `input`,
+  `select`, `multi-select`, and `confirm`. `DiscoveryAnswers` values
+  broaden to `string | string[] | boolean`. Sprint 1 questions and
+  consumers are unchanged.
+- **Gap detection** (`GapAssessment`). The architect tags the end of an
+  interview as `complete`, `nice_to_have_missing`, or `critical_missing`
+  with a human-readable rationale and a list of missing items. On
+  critical, `runAdaptiveDiscovery` prompts via a configurable
+  `confirmCriticalGap` hook (default: inquirer `confirm`); accepted →
+  override recorded with `acceptedAt` ISO timestamp, rejected →
+  `SpexError`.
+- **Universal navigation commands** during any flow (static or
+  adaptive): `/why`, `/skip`, `/back`, `/pause`, `/?` (or `/help`).
+  For input questions, commands are typed inline; for select, they
+  appear as choices after a separator; multi-select and confirm get a
+  small pre-step menu (Answer / nav commands) before the actual prompt.
+- **State persistence** to YAML on `/pause`. `saveDiscoveryState` /
+  `loadDiscoveryState` (typically against `.ai/scratch/discovery.yaml`)
+  round-trip the history + skipped ids with a `DiscoveryStateSchema`
+  zod schema. Pause throws `DiscoveryPausedError` after writing state.
+- Discovery split into two entry points: `runDiscovery(questions,
+  options?)` (static — Sprint 1 backward-compatible default) and
+  `runAdaptiveDiscovery({ agent, confirmCriticalGap?, nav? })`
+  (architect-driven, returns `DiscoveryResult` with answers + gap +
+  optional override).
+
+### Added — Skills foundation
+
+- New workspace package `@spex/skills` shipping markdown skill bundles
+  and a loader. Single-file Claude Code format: each
+  `<name>/SKILL.md` has YAML frontmatter (`name` kebab-case,
+  `description`, optional `allowed-tools`) followed by the markdown
+  body. `loadSkills` walks the package root, validates each manifest
+  against a zod schema, and returns deterministic name-sorted results.
+  `getSkill(name)` for direct lookup.
+- First end-to-end skill: **`spex-discovery`** — a routing skill that
+  tells an agent to invoke SPEX's discovery flow (CLI, library, or MCP)
+  and documents the architect-driven Q&A, gap detection, and the
+  navigation commands.
+- New `spex skills install` CLI subcommand. Copies bundled skills into
+  a Claude Code skills directory. `--scope=user` (default) writes to
+  `~/.claude/skills/`; `--scope=project` writes to `./.claude/skills/`.
+  Idempotent: re-running overwrites in place.
+- New MCP tools on `@spex/mcp-server`: **`list_skills`** returns each
+  manifest (name, description, optional allowed-tools); **`get_skill`**
+  takes a name and returns the manifest plus the full markdown body.
+  Same skill source as the CLI install path — `@spex/skills`. Any
+  MCP-aware client (Claude Code, Cursor, others) can pull skills at
+  runtime without a local install step.
+
+### Verified
+
+- 56 discovery unit tests (architect-agent, flow, navigation, state),
+  11 @spex/skills loader tests, 7 `skills-install` CLI tests, 7 new
+  MCP `list_skills` + `get_skill` tests, and the server.test.ts
+  `tools/list` advertisement updated for the 6-tool surface
+  (`spex_new`, `spex_implement`, `spex_fix`, `spex_review`,
+  `list_skills`, `get_skill`).
+
+### Deferred to a follow-up
+
+- Wiring `spex new` / `spex init` to use `runAdaptiveDiscovery`. Both
+  CLI commands still call the static `runDiscovery` for v0.9.0; the
+  adaptive flow is available via the library API and via consumers of
+  the MCP `spex-discovery` skill.
+- Resume from `.ai/scratch/discovery.yaml` (load is implemented;
+  re-entering an interview mid-stream is a Sprint 12 deliverable).
+- Persisting gap-override decisions into a structured audit trail
+  alongside `runAdaptiveDiscovery`'s in-memory result.
+
+### Known issues
+
+- Unchanged from 0.5.0 / 0.7.0 / 0.8.0:
+  `src/logger/logger.test.ts` and `src/implementation/safety.test.ts`
+  flake on Windows due to pino file handle race + drive-letter
+  resolution differences. Pass on Linux CI.
+
 ## [0.8.0] — 2026-05-19
 
 ### Added — Slack integration
@@ -328,6 +419,7 @@ a specific version (or commit SHA, until npm publish) if you need stability.
 - CI workflow (`.github/workflows/ci.yml`) running install, lint,
   typecheck, test on push + PR.
 
+[0.9.0]: https://github.com/rogcg/spex/releases/tag/v0.9.0
 [0.8.0]: https://github.com/rogcg/spex/releases/tag/v0.8.0
 [0.7.0]: https://github.com/rogcg/spex/releases/tag/v0.7.0
 [0.5.2]: https://github.com/rogcg/spex/releases/tag/v0.5.2

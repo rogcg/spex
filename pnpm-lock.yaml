@@ -41,6 +41,9 @@ importers:
       '@spex/schemas':
         specifier: workspace:*
         version: link:../schemas
+      '@spex/skills':
+        specifier: workspace:*
+        version: link:../skills
       commander:
         specifier: ^12.1.0
         version: 12.1.0
@@ -245,6 +248,9 @@ importers:
       '@spex/schemas':
         specifier: workspace:*
         version: link:../schemas
+      '@spex/skills':
+        specifier: workspace:*
+        version: link:../skills
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -274,6 +280,28 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(postcss@8.5.14)(typescript@5.9.3)(yaml@2.9.0)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.19)
+
+  packages/skills:
+    dependencies:
+      yaml:
+        specifier: ^2.6.1
+        version: 2.9.0
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.19
       tsup:
         specifier: ^8.3.5
         version: 8.5.1(postcss@8.5.14)(typescript@5.9.3)(yaml@2.9.0)
