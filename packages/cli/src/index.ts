@@ -12,8 +12,14 @@ import { runResumeCommand } from './commands/resume.js';
 import { runReviewCommand } from './commands/review.js';
 import { parseSkillsInstallScope, runSkillsInstallCommand } from './commands/skills-install.js';
 import { runSlackWebhookCommand } from './commands/slack-webhook.js';
+import { loadProjectEnv } from './env-file.js';
 import { STRINGS } from './strings.js';
 import { printBanner } from './ui/banner.js';
+
+// Load <cwd>/.env into process.env (without overriding shell-set values) before
+// commander dispatches, so every command sees keys persisted by a previous
+// `spex new` / `spex init` run.
+loadProjectEnv(process.cwd());
 
 /** Commander collector for repeatable options like `--affected <path>`. */
 function collectRepeatable(value: string, previous: string[]): string[] {

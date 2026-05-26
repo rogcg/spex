@@ -23,6 +23,10 @@ import {
 } from '@spex/core';
 import type { Decision } from '@spex/schemas';
 import { defaultDecisionPrompter } from '../flows/decision-approval.js';
+import {
+  persistAnthropicApiKey,
+  promptForAnthropicApiKey,
+} from '../flows/ensure-api-key.js';
 import { type StackSelectionEntryState, runStackSelection } from '../flows/stack-selection.js';
 import { STRINGS } from '../strings.js';
 
@@ -78,6 +82,13 @@ export async function runNewCommand(
       console.log(STRINGS.newCommand.cancelled);
       return;
     }
+  }
+
+  let promptedApiKey: string | undefined;
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.log(STRINGS.apiKey.notFoundNotice);
+    promptedApiKey = await promptForAnthropicApiKey();
+    process.env.ANTHROPIC_API_KEY = promptedApiKey;
   }
 
   let llm: AnthropicProvider;
@@ -240,6 +251,11 @@ export async function runNewCommand(
 
   console.log(STRINGS.newCommand.injectingAi);
   await injectAiFolder({ projectDir, spec });
+
+  if (promptedApiKey) {
+    const savedPath = persistAnthropicApiKey({ projectDir, key: promptedApiKey });
+    if (savedPath) console.log(STRINGS.apiKey.savedTo(savedPath));
+  }
 
   // Flush staged audit entries into the now-existing project .ai/audit/ folder.
   for (const entry of stagedAuditEntries) {

@@ -59,7 +59,7 @@ SPEX is an AI agent orchestration framework for software development, based on *
 
 - Node.js **20 LTS** or newer
 - pnpm **9** or newer
-- An `ANTHROPIC_API_KEY` set in your environment
+- An Anthropic API key. If you do not have `ANTHROPIC_API_KEY` set in your environment, `spex new` and `spex init` will prompt for it interactively and save it to a local `.env` file inside the project. Subsequent commands auto-load that `.env` and pick the key up.
 
 ### Environment variables
 

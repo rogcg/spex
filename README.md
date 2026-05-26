@@ -34,7 +34,7 @@ See [`CLAUDE.md`](./CLAUDE.md) for the architectural decisions and code conventi
 
 - Node.js 20 LTS or newer
 - pnpm 9 or newer
-- An `ANTHROPIC_API_KEY` set in your environment (see `.env.example`)
+- An Anthropic API key. If you do not have `ANTHROPIC_API_KEY` set in your environment, `spex new` and `spex init` will prompt for it interactively and save it to a local `.env` file inside the project. Subsequent commands auto-load that `.env` and pick the key up. See `.env.example` if you prefer to set it manually.
 
 ### Environment variables
 

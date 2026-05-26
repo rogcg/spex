@@ -43,7 +43,7 @@ bottom of each section.
 - **Banner.** All interactive commands print a one-line banner. `spex mcp-server` does **not**, so it cannot corrupt the JSON-RPC stream.
 - **Exit codes.** `0` on success, `1` on any caught error. Errors are written to stderr (so they never corrupt the MCP stdio framing when the failure happens inside `spex mcp-server`).
 - **Logging.** Library code uses pino, written to `stderr` by default. Override via `SPEX_LOG_DEST` (`stderr` | `stdout` | `file:<path>`) and `SPEX_LOG_LEVEL` (`debug` | `info` | `warn` | `error`).
-- **API keys.** `ANTHROPIC_API_KEY` is required for every command that calls an LLM (every command except `github setup`, `skills install`, `mcp-server` startup, `resume`, `logs`, and the webhook receivers in `--dry-run` mode).
+- **API keys.** `ANTHROPIC_API_KEY` is required for every command that calls an LLM (every command except `github setup`, `skills install`, `mcp-server` startup, `resume`, `logs`, and the webhook receivers in `--dry-run` mode). `spex new` and `spex init` will prompt for it interactively when missing and save it to `<project>/.env`; subsequent commands auto-load `<cwd>/.env` at startup (shell-set values take precedence).
 - **Working directory.** Most commands assume the current working directory is the SPEX project root (the directory that contains `.ai/`). Exceptions are called out below.
 
 ---
@@ -69,7 +69,7 @@ Create a new SPEX-managed project: discovery → stack recommendation → tech-s
 
 **Prerequisites**
 
-- `ANTHROPIC_API_KEY` set.
+- `ANTHROPIC_API_KEY` set in your environment, **or** enter it at the prompt — it will be saved to `<name>/.env` for future runs.
 - The parent directory must not already contain a directory named `<name>`.
 
 **What it writes**
@@ -121,7 +121,7 @@ Add `.ai/` infrastructure to an existing project. Detects the stack from `packag
 
 **Prerequisites**
 
-- `ANTHROPIC_API_KEY` set.
+- `ANTHROPIC_API_KEY` set in your environment, **or** enter it at the prompt — it will be saved to `<cwd>/.env` for future runs.
 - Run from inside the project root.
 
 **Currently detected stack signals**

@@ -619,6 +619,15 @@ export const STRINGS = {
       `Error: --format "${raw}" is invalid. Use table, json, or summary.`,
   },
 
+  apiKey: {
+    notFoundNotice:
+      '\nANTHROPIC_API_KEY is not set.\nCreate a key at https://console.anthropic.com/settings/keys, then paste it below.\nIt will be saved to a local .env file so you do not need to enter it again.',
+    promptMessage: 'Anthropic API key',
+    validationEmpty: 'Please paste your Anthropic API key.',
+    validationFormat: 'That does not look like an Anthropic API key (it should start with "sk-ant-").',
+    savedTo: (path: string) => `  ✓ API key saved to ${path}`,
+  },
+
   errors: {
     missingApiKey: (envVar: string) =>
       `Error: ${envVar} is not set. Set it in your environment or a .env file before running spex new.`,

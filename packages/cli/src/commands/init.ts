@@ -16,6 +16,7 @@ import {
   runAdaptiveDiscovery,
   techSpecToYaml,
 } from '@spex/core';
+import { persistAnthropicApiKey, promptForAnthropicApiKey } from '../flows/ensure-api-key.js';
 import { STRINGS } from '../strings.js';
 
 export interface RunInitCommandOptions {
@@ -35,6 +36,14 @@ export async function runInitCommand(options: RunInitCommandOptions = {}): Promi
       return;
     }
     throw error;
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.log(STRINGS.apiKey.notFoundNotice);
+    const key = await promptForAnthropicApiKey();
+    process.env.ANTHROPIC_API_KEY = key;
+    const savedPath = persistAnthropicApiKey({ projectDir, key });
+    if (savedPath) console.log(STRINGS.apiKey.savedTo(savedPath));
   }
 
   let llm: AnthropicProvider;
