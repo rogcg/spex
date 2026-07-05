@@ -113,10 +113,20 @@ const GapAssessmentSchema = z.discriminatedUnion('status', [
   }),
 ]);
 
-const NextStepResponseSchema = z.discriminatedUnion('done', [
-  z.object({ done: z.literal(false), question: QuestionSchema }),
-  z.object({ done: z.literal(true), gap: GapAssessmentSchema }),
-]);
+// NOTE: this MUST stay a top-level object (not a discriminatedUnion). Anthropic's
+// tool `input_schema` requires a root `type: "object"`; a union serialises to a
+// root `anyOf` with no `type`, which the API rejects with
+// "tools.0.custom.input_schema.type: Field required". The `done` flag plus the
+// refine below recover the discriminated-union semantics for consumers.
+const NextStepResponseSchema = z
+  .object({
+    done: z.boolean(),
+    question: QuestionSchema.optional(),
+    gap: GapAssessmentSchema.optional(),
+  })
+  .refine((r) => (r.done ? r.gap !== undefined : r.question !== undefined), {
+    message: 'done=true requires a gap assessment; done=false requires a question',
+  });
 
 export function createArchitectAgent(opts: ArchitectAgentOptions): ArchitectAgent {
   if (opts.maxQuestions !== undefined && opts.maxQuestions < 1) {
@@ -148,7 +158,13 @@ export function createArchitectAgent(opts: ArchitectAgentOptions): ArchitectAgen
         schema: NextStepResponseSchema,
       });
       if (response.done) {
+        if (response.gap === undefined) {
+          throw new SpexError('architect signaled done but returned no gap assessment');
+        }
         return { type: 'done', gap: toGapAssessment(response.gap) };
+      }
+      if (response.question === undefined) {
+        throw new SpexError('architect returned a non-done step but no question');
       }
       return { type: 'question', question: toQuestion(response.question) };
     },
