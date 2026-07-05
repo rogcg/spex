@@ -18,3 +18,4 @@ export * from './review/index.js';
 export * from './state/index.js';
 export * from './audit/index.js';
 export * from './recovery/index.js';
+export * from './suggestions/index.js';

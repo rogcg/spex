@@ -28,6 +28,7 @@ import {
   promptForAnthropicApiKey,
 } from '../flows/ensure-api-key.js';
 import { type StackSelectionEntryState, runStackSelection } from '../flows/stack-selection.js';
+import { suggestNextSteps } from '../flows/suggest-next.js';
 import { STRINGS } from '../strings.js';
 
 const PROJECT_NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
@@ -272,6 +273,17 @@ export async function runNewCommand(
   await runCommand('git', ['commit', '-m', 'chore: add SPEX .ai/ folder'], { cwd: projectDir });
 
   console.log(STRINGS.newCommand.success(projectName, projectDir));
+  await suggestNextSteps({
+    llm,
+    context: {
+      command: `new ${projectName}`,
+      outcome: `New SPEX project "${projectName}" scaffolded at ${projectDir}; git initialised with the .ai/ folder committed`,
+      facts: [
+        `The user is not yet inside the project directory (needs: cd ${projectName})`,
+        'GitHub integration is not configured yet',
+      ],
+    },
+  });
 }
 
 function pickEntryState(options: NewCommandOptions): StackSelectionEntryState {

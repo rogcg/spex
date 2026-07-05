@@ -17,6 +17,7 @@ import {
   techSpecToYaml,
 } from '@spex/core';
 import { persistAnthropicApiKey, promptForAnthropicApiKey } from '../flows/ensure-api-key.js';
+import { suggestNextSteps } from '../flows/suggest-next.js';
 import { STRINGS } from '../strings.js';
 
 export interface RunInitCommandOptions {
@@ -121,4 +122,12 @@ export async function runInitCommand(options: RunInitCommandOptions = {}): Promi
   await injectAiFolder({ projectDir, spec });
 
   console.log(STRINGS.initCommand.success(projectDir));
+  await suggestNextSteps({
+    llm,
+    context: {
+      command: 'init',
+      outcome: `SPEX adopted into an existing ${stack.framework} project; .ai/tech-spec.yaml written`,
+      facts: ['The project already existed', 'GitHub integration is not configured yet'],
+    },
+  });
 }

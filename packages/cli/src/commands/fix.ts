@@ -35,6 +35,7 @@ import type {
   RegressionTest,
   RootCauseAnalysis,
 } from '@spex/schemas';
+import { suggestNextSteps } from '../flows/suggest-next.js';
 import { STRINGS } from '../strings.js';
 import { runGithubPrStep } from './github-pr.js';
 
@@ -351,6 +352,17 @@ export async function runFixCommand(
   }
 
   console.log(STRINGS.fixCommand.success({ branch: branchName, commit: commitSha }));
+  await suggestNextSteps({
+    llm,
+    context: {
+      command: 'fix',
+      outcome:
+        branchName !== null
+          ? `Bug fixed with a regression test and committed on branch "${branchName}"; a pull request was opened if GitHub is configured`
+          : 'Bug fixed with a regression test and committed',
+      ...(branchName !== null ? { facts: [`Fix branch: ${branchName}`] } : {}),
+    },
+  });
 }
 
 function firstLine(message: string): string {

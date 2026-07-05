@@ -7,6 +7,7 @@ import {
   loadAiConfig,
 } from '@spex/core';
 import { createGitHubClient, runReviewFlow } from '@spex/integrations-github';
+import { suggestNextSteps } from '../flows/suggest-next.js';
 import { STRINGS } from '../strings.js';
 import { InvalidPrRefError, parsePrRef } from './review-ref.js';
 
@@ -128,5 +129,13 @@ export async function runReviewCommand(
   }
   if (flow.comment) {
     console.log(STRINGS.reviewCommand.posted(flow.comment.htmlUrl));
+    await suggestNextSteps({
+      llm,
+      context: {
+        command: 'review',
+        outcome: 'Review comment posted to the pull request on GitHub',
+        facts: [`Recommendation: ${flow.result.recommendation}`],
+      },
+    });
   }
 }

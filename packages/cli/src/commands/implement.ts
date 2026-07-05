@@ -24,6 +24,7 @@ import {
   writeFeatureSpec,
 } from '@spex/core';
 import { type LinearIssue, createLinearMcpClient, getLinearIssue } from '@spex/integrations-linear';
+import { suggestNextSteps } from '../flows/suggest-next.js';
 import { STRINGS } from '../strings.js';
 import { runGithubPrStep } from './github-pr.js';
 import { collectCommitGroups, formatPlanForReview } from './implement-helpers.js';
@@ -294,6 +295,14 @@ export async function runImplementCommand(
         auditLog: executorResult.auditLogPath,
       }),
     );
+    await suggestNextSteps({
+      llm,
+      context: {
+        command: 'implement',
+        outcome: 'Feature implemented, but git was skipped (--no-git): no branch or commits',
+        facts: ['No branch or pull request was created', 'Changes are in the working tree only'],
+      },
+    });
     return;
   }
 
@@ -362,6 +371,17 @@ export async function runImplementCommand(
       auditLog: executorResult.auditLogPath,
     }),
   );
+  await suggestNextSteps({
+    llm,
+    context: {
+      command: 'implement',
+      outcome:
+        branchName !== null
+          ? `Feature implemented and committed on branch "${branchName}"; a pull request was opened if GitHub is configured`
+          : 'Feature implemented and committed',
+      ...(branchName !== null ? { facts: [`Feature branch: ${branchName}`] } : {}),
+    },
+  });
 }
 
 function firstLine(message: string): string {

@@ -177,3 +177,9 @@ export {
   type ScratchWorkflowKind,
   type ScratchWorkflowStatus,
 } from './scratch-state.js';
+export {
+  NextCommandSuggestionSchema,
+  NextCommandSuggestionsSchema,
+  type NextCommandSuggestion,
+  type NextCommandSuggestions,
+} from './next-command-suggestion.js';
