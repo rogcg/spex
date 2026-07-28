@@ -11,6 +11,11 @@ function captureEnv(key: string): void {
   savedEnv[key] = process.env[key];
 }
 
+// Env vars must be unset via delete — assigning undefined coerces to the string "undefined".
+function clearEnv(key: string): void {
+  delete process.env[key];
+}
+
 beforeEach(async () => {
   projectDir = join(
     tmpdir(),
@@ -29,7 +34,7 @@ afterEach(() => {
 describe('loadProjectEnv', () => {
   it('populates process.env from .env when keys are unset', async () => {
     captureEnv('SPEX_TEST_KEY_A');
-    delete process.env.SPEX_TEST_KEY_A;
+    clearEnv('SPEX_TEST_KEY_A');
     await writeFile(join(projectDir, '.env'), 'SPEX_TEST_KEY_A=hello\n', 'utf8');
     loadProjectEnv(projectDir);
     expect(process.env.SPEX_TEST_KEY_A).toBe('hello');
@@ -50,8 +55,8 @@ describe('loadProjectEnv', () => {
   it('skips comment and blank lines, strips surrounding quotes', async () => {
     captureEnv('SPEX_TEST_KEY_C');
     captureEnv('SPEX_TEST_KEY_D');
-    delete process.env.SPEX_TEST_KEY_C;
-    delete process.env.SPEX_TEST_KEY_D;
+    clearEnv('SPEX_TEST_KEY_C');
+    clearEnv('SPEX_TEST_KEY_D');
     await writeFile(
       join(projectDir, '.env'),
       '# a comment\n\nSPEX_TEST_KEY_C="quoted value"\nSPEX_TEST_KEY_D=\'single\'\n',

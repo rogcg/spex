@@ -638,7 +638,8 @@ export const STRINGS = {
       '\nANTHROPIC_API_KEY is not set.\nCreate a key at https://console.anthropic.com/settings/keys, then paste it below.\nIt will be saved to a local .env file so you do not need to enter it again.',
     promptMessage: 'Anthropic API key',
     validationEmpty: 'Please paste your Anthropic API key.',
-    validationFormat: 'That does not look like an Anthropic API key (it should start with "sk-ant-").',
+    validationFormat:
+      'That does not look like an Anthropic API key (it should start with "sk-ant-").',
     savedTo: (path: string) => `  ✓ API key saved to ${path}`,
   },
 
