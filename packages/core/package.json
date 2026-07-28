@@ -1,6 +1,6 @@
 {
   "name": "@spex/core",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha.11",
   "private": true,
   "description": "Core orchestration library for SPEX — LLM, discovery, tech-spec, scaffold",
   "license": "MIT",

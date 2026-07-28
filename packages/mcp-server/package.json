@@ -1,6 +1,6 @@
 {
   "name": "@spex/mcp-server",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha.11",
   "private": true,
   "description": "MCP server exposing SPEX as tools to MCP-compatible IDEs",
   "license": "MIT",

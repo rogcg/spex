@@ -1,6 +1,6 @@
 {
   "name": "spex",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha.11",
   "private": true,
   "description": "Spec-driven Programming EXecutor — AI agent orchestration framework",
   "license": "MIT",

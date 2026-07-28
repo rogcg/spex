@@ -1,6 +1,6 @@
 {
   "name": "@spex/integrations-github",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha.11",
   "private": true,
   "description": "GitHub integration for SPEX — Octokit client + PR/branch/issue operations",
   "license": "MIT",

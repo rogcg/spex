@@ -1,6 +1,6 @@
 {
   "name": "@spex/skills",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha.11",
   "private": true,
   "description": "Skill bundles for SPEX — markdown-based agent instructions + loader",
   "license": "MIT",

@@ -1,6 +1,6 @@
 {
   "name": "@spex/integrations-linear",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha.11",
   "private": true,
   "description": "Linear integration for SPEX — MCP client wrapper for the official Linear MCP server",
   "license": "MIT",
